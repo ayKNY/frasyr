@@ -2821,6 +2821,7 @@ derive_future_summary <- function(res_future, target=NULL){
     deviance = tmpfunc(res_future$SR_mat[,,"deviance"]),
     deviance_sd = tmpfunc(res_future$SR_mat[,,"deviance"],fun=sd),
     catch   = tmpfunc(res_future$HCR_realized[,,"wcatch"]),
+    revenue = tmpfunc(res_future$HCR_realized[,,"revenue"]),
     beta    = tmpfunc(res_future$HCR_mat[,,"beta"]),
     Blimit  = tmpfunc(res_future$HCR_mat[,,"Blimit"]),
     Bban    = tmpfunc(res_future$HCR_mat[,,"Bban"]),
