@@ -1783,7 +1783,7 @@ set_lower_limit_catch <- function(catch_previous_year, catch_current_year, lower
 #'
 
 est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE, candidate_PGY=c(0.1,0.6),
-                      only_lowerPGY="lower", candidate_B0=-1, candidate_Babs=-1, candidate_Fbase=-1,
+                      only_lowerPGY="lower", objective = "MSY", candidate_B0=-1, candidate_Babs=-1, candidate_Fbase=-1,
                       calc_yieldcurve=TRUE,
                       trace_multi=c(0.9,0.925,0.95,0.975,1.025,1.05,1.075),
                       select_Btarget=0, select_Blimit=0, select_Bban=0){
@@ -1792,7 +1792,8 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
   res_SR_MSY <-  data_future$input$res_SR
   # F=0からssbがゼロになるまでFを順次大きくしたtraceを実行する
   trace.multi <- unique(sort(c(0.001,seq(from=0,to=2,by=0.1),10,100)))
-  trace_pre <- frasyr::trace_future(data_future$data, trace.multi=trace.multi, ncore=ncore)
+  trace_pre <- frasyr::trace_future(data_future$data, objective = objective,
+                                    trace.multi=trace.multi, ncore=ncore)
   B0stat <- trace_pre %>% dplyr::filter(fmulti==0) %>% mutate(RP_name="B0")
   trace.multi2 <- unique(range(trace.multi[trace_pre$ssb.mean>0.001]))
 
@@ -1802,21 +1803,26 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
   # 以降、初期値はそれを参考に決める
   res_future_MSY <- future_vpa(tmb_data = data_future$data,
                                optim_method=optim_method,
+                               objective = objective,
                                multi_init=mean(f_range),
                                multi_lower=f_range[1],
                                multi_upper=f_range[2],
                                compile=compile_tmb)
 
-    MSYstat <- res_future_MSY %>% get.stat(use_new_output=TRUE) %>%
-      mutate(RP_name="MSY")
-
+  MSYstat <- res_future_MSY %>% get.stat_eco(use_new_output=TRUE) %>%
+    mutate(RP_name = objective)
+  if(objective == "MSY"){
+    PGY_denom <- MSYstat$catch.mean
+  }else{
+      if(objective == "Revenue"){PGY_denom <- MSYstat$rev.mean}
+    }
       # 他管理基準値を推定するためのオブジェクトを作っておく
     obj_mat <- NULL
     if(candidate_PGY[1]>0){
 
         obj_mat <- bind_rows(obj_mat,
                              tibble(RP_name    = str_c("PGY",candidate_PGY,"lower",sep="_"),
-                                    obj_value  = candidate_PGY * MSYstat$catch.mean,
+                                    obj_value  = candidate_PGY * PGY_denom,
                                     optim_method=optim_method,
                                     multi_init = res_future_MSY$multi*1.2,
                                     multi_lower= res_future_MSY$multi,
@@ -1826,7 +1832,7 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
 
         if(only_lowerPGY=="both"){
             obj_mat2 <- tibble(RP_name    = str_c("PGY",candidate_PGY,"upper",sep="_"),
-                               obj_value  = candidate_PGY * MSYstat$catch.mean,
+                               obj_value  = candidate_PGY * PGY_denom,
                                optim_method=optim_method,
                                multi_init = res_future_MSY$multi*0.5,
                                multi_upper= res_future_MSY$multi,
