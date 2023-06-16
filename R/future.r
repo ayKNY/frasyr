@@ -1596,12 +1596,19 @@ format_to_old_future <- function(fout){
   fout_old$caa       <- fout$wcaa/fout_old$waa
   fout_old$multi     <- fout$multi
   fout_old$recruit   <- fout$SR_mat[,,"recruit"]
+  if("revaa_mat" %in% names(fout)){
+    fout_old$paa <- fout$paa_mat
+    fout_old$revaa_mat <- fout$paa_mat
+  }
+  
   if(!is.null(fout$HCR_realized)){
       fout_old$beta_gamma     <- fout$HCR_realized[,,"beta_gamma"]
       fout_old$alpha     <- fout$HCR_realized[,,"beta_gamma"]
       fout_old$Fratio     <- fout$HCR_realized[,,"Fratio"]
-  }
-  else{
+      if("revaa_mat" %in% names(fout)){
+        fout_old$revenue <- fout$HCR_realized[,,"revenue"]
+        }
+  }else{
     fout_old$beta_gamma     <- fout$HCR_mat[,,"beta_gamma"]
       fout_old$alpha     <- fout$HCR_mat[,,"beta_gamma"]
       fout_old$Fratio     <- fout$HCR_mat[,,"Fratio"]
