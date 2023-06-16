@@ -659,7 +659,8 @@ future_vpa_R <- function(naa_mat,
                          waa_catch_par_mat  = NULL, # option for waa_catch_fun
                          waa_catch_rand_mat = NULL,                         
                          maa_par_mat  = NULL, # option for maa_fun
-                         maa_rand_mat = NULL
+                         maa_rand_mat = NULL,
+                         paa_mat = NULL
 ){
 
   options(deparse.max.lines=10)
@@ -687,7 +688,7 @@ future_vpa_R <- function(naa_mat,
   tmb_data <- lapply(argname,function(x) eval(parse(text=x)))
   names(tmb_data) <- argname
 
-  HCR_realized_name <- c("wcatch", "beta_gamma", "Fratio","reserved_catch","original_ABC","original_ABC_plus")
+  HCR_realized_name <- c("wcatch", "beta_gamma", "Fratio","reserved_catch","original_ABC","original_ABC_plus", "revenue")
   HCR_realized <- array(0,dim=c(dim(HCR_mat)[[1]],dim(HCR_mat)[[2]],length(HCR_realized_name)),
                         dimnames=list(dimnames(HCR_mat)[[1]],
                                       dimnames(HCR_mat)[[2]],
@@ -971,6 +972,13 @@ future_vpa_R <- function(naa_mat,
       ##                                               min_value=maa_par_mat[,,"min"],max_value=maa_par_mat[,,"max"])
     }
     HCR_realized[t,,"wcatch"] <- catch_equation(N_mat[,t,],F_mat[,t,],waa_catch_mat[,t,],M_mat[,t,],Pope=Pope) %>% colSums()
+    if(!is.null(paa_mat)){
+      catch_temp <- catch_equation(N_mat[ , t, ],
+                                   F_mat[ , t, ],
+                                   waa_catch_mat[ , t, ],
+                                   M_mat[ , t,], Pope = Pope) * paa_mat[ , t, ]
+      HCR_realized[t, ,"revenue"] <- colSums(catch_temp)
+          }
   }
 
   if(Pope==1){
@@ -980,6 +988,11 @@ future_vpa_R <- function(naa_mat,
     wcaa_mat <- N_mat*(1-exp(-F_mat-M_mat))*F_mat/(F_mat+M_mat) * waa_catch_mat
   }
   HCR_realized[,,"wcatch"] <- apply(wcaa_mat,c(2,3),sum)
+  
+  if(!is.null(paa_mat)){
+     revaa_mat <- wcaa_mat * paa_mat
+     HCR_realized[,,"revenue"] <- apply(revaa_mat, c(2,3), sum) #総漁獲金額
+     }  
 
   if(isTRUE(do_MSE)){
     F_pseudo_mat <- MSE_input_data$data$faa
@@ -1004,16 +1017,32 @@ future_vpa_R <- function(naa_mat,
     last_catch <- colSums(wcaa_mat[,total_nyear,])
     if(obj_stat==0) obj <- mean(last_catch)
     if(obj_stat==1) obj <- geomean(last_catch)
-  }
-  else{
-    if(obj_stat==0) obj <- mean(spawner_mat[total_nyear,])
-    if(obj_stat==1) obj <- geomean(spawner_mat[total_nyear,])
-    if(obj_stat==2) obj <- median(spawner_mat[total_nyear,])
-  }
+    }else{ #objective => 2
+      if(objective < 3 ){ #objective ==2 "SSB" 
+        if(obj_stat==0) obj <- mean(spawner_mat[total_nyear,])
+        if(obj_stat==1) obj <- geomean(spawner_mat[total_nyear,])
+        if(obj_stat==2) obj <- median(spawner_mat[total_nyear,])
+        }else{#objective == 3 "Revenue" を最大化する時
+          if(!is.null(paa_mat) ){ 
+            last_revenue <- colSums(revaa_mat[,total_nyear,])
+            if(obj_stat < 2 ){
+              if(obj_stat < 1){ #obj_stat == 0 
+                obj <- mean(last_revenue)
+                }else{ #obj_stat == 1
+                  obj <- geomean(last_revenue)
+                  }
+              }else{ #obj_stat == 2
+                obj <- median(last_revenue)
+                }
+            }else{
+              stop("paa_mat is needed")
+            }
+          }
 
 
-  {if(objective==0) obj <- -log(obj) # MSY case
-    else{
+  {if(objective==0 | objective==3) {
+    obj <- -log(obj) # MSY case
+    }else{
       obj <- (log(obj/obj_value))^2 # PGY, B0% case
     }
   }
@@ -1026,6 +1055,11 @@ future_vpa_R <- function(naa_mat,
     tmb_data$SR_mat[,,"cbiomass"]  <- apply(N_mat*waa_catch_mat,c(2,3),sum)  
     res <- list(naa=N_mat, wcaa=wcaa_mat, faa=F_mat, SR_mat=tmb_data$SR_mat,maa=maa_mat,
                 HCR_mat=HCR_mat,HCR_realized=HCR_realized,multi=exp(x),waa=waa_mat, waa_catch_mat=waa_catch_mat)
+    if(!is.null(paa_mat)){
+      res$paa_mat <- paa_mat
+      res$revaa_mat <- revaa_mat
+      }
+    
     if(isTRUE(do_MSE)) res$SR_MSE <- SR_MSE
     return(res)
   }
