@@ -1206,6 +1206,17 @@ get.stat <- function(fout,eyear=0,tmp.year=NULL, use_new_output=FALSE){
                   "Fref2Fcurrent"=fout$multi,
                   fmulti=fout$multi
   )
+  if("revaa_mat" %in% names(fout)){
+    b <-  data.frame("rev.mean"=mean(fout$revenue[tmp.year,col.target]),
+                     "rev.sd"=sd(fout$revenue[tmp.year,col.target]),
+                     "rev.geomean"=geomean(fout$revenue[tmp.year,col.target]),
+                     "rev.median"=median(fout$revenue[tmp.year,col.target],na.rm=T),
+                     "rev.L10"=quantile(fout$revenue[tmp.year,col.target],na.rm=T,probs=0.1),
+                     "rev.H10"=quantile(fout$revenue[tmp.year,col.target],na.rm=T,probs=0.9))
+    a <- cbind(a,b)
+    a$rev.CV <- a$rev.sd / a$rev.mean
+    }
+ 
   a$U.mean <- a$catch.mean/a$cbiom.mean
   a$U.median <- a$catch.median/a$cbiom.median
   a$U.geomean <- a$catch.geomean/a$cbiom.geomean
@@ -1251,7 +1262,13 @@ get.stat <- function(fout,eyear=0,tmp.year=NULL, use_new_output=FALSE){
   ssb.mat <- tmpfunc_(ssb, nage, agename, "SSB")
   tc.mat  <- tmpfunc_(tc,  nage, agename, "TC")
 
-  res.stat2 <- as.data.frame(t(c(tb.mat,ctb.mat,tc.mat,ssb.mat)))
+  if("revaa_mat" %in% names(fout)){
+    reve <- fout$paa * fout$wcaa
+    rev.mat <- tmpfunc_(reve, nage, agename, "REV")
+    res.stat2 <- as.data.frame(t(c(tb.mat,ctb.mat,tc.mat,ssb.mat, rev.mat)))
+    }else{
+      res.stat2 <- as.data.frame(t(c(tb.mat,ctb.mat,tc.mat,ssb.mat))) 
+      }
   res.stat  <- cbind(res.stat1,res.stat2) %>% as_tibble()
   return(res.stat)
 }
