@@ -1500,6 +1500,7 @@ naming_adreport <- function(tmb_data, ad_report){
 #' @encoding UTF-8
 
 trace_future <- function(tmb_data,
+                         objective = "MSY",
                          trace.multi=c(seq(from=0,to=0.9,by=0.1),1,
                                        seq(from=1.1,to=2,by=0.1),3:5,7,20,100),
                          ncore=0){
@@ -1515,6 +1516,7 @@ trace_future <- function(tmb_data,
       #       R_obj_fun(x=x, tmb_data = tmb_data, what_return="stat") %>%
       future_vpa(tmb_data,
                  optim_method="none",
+                 objective = objective,
                  multi_init=x,
                  multi_lower=x,
                  multi_upper=x) %>%
@@ -1528,6 +1530,7 @@ trace_future <- function(tmb_data,
     trace <- foreach::foreach(x=trace.multi,.combine="rbind")%dopar%{
       future_vpa(tmb_data,
                  optim_method="none",
+                 objective = objective,
                  multi_init=x,
                  multi_lower=x,
                  multi_upper=x) %>%
