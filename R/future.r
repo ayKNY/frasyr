@@ -1551,12 +1551,18 @@ get_summary_stat <- function(all.stat){
   sumvalue <- all.stat %>% as_tibble %>%
     mutate(SSB2SSB0=all.stat$ssb.mean/all.stat$ssb.mean[2]) %>%
     select(RP_name,ssb.mean,SSB2SSB0,biom.mean,cbiom.mean, U.mean,catch.mean,catch.CV,Fref2Fcurrent)
-  colnames(sumvalue) <- c("RP_name","SSB","SSB2SSB0","B","cB","U","Catch","Catch.CV","Fref/Fcur")
-
+  sumvalue_col <- c("RP_name","SSB","SSB2SSB0","B","cB","U","Catch","Catch.CV","Fref/Fcur")
+  if("rev.mean" %in% colnames(all.stat)){
+    rev_tb <- all.stat %>% as_tibble %>% dplyr::select(rev.mean, rev.CV)
+    sumvalue <- cbind(sumvalue, rev_tb)
+    sumvalue_col <- c(sumvalue_col, "rev.mean","rev.CV")
+  }
+  colnames(sumvalue) <- sumvalue_col
+  
   sumvalue <- bind_cols(sumvalue,all.stat[,substr(colnames(all.stat),1,1)=="F"])
-
+  
   sumvalue$RP.definition <- NA
-  sumvalue$RP.definition[sumvalue$RP_name=="MSY"]           <- "Btarget0"
+  sumvalue$RP.definition[sumvalue$RP_name=="MSY"|sumvalue$RP_name=="Revenue"] <- "Btarget0"
   sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.6_lower"] <- "Blimit0"
   sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.1_lower"] <- "Bban0"
   sumvalue <- sumvalue %>% select(1,ncol(sumvalue),2:(ncol(sumvalue)-1))
