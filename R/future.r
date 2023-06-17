@@ -1565,8 +1565,8 @@ get_summary_stat <- function(all.stat){
   
   sumvalue$RP.definition <- NA
   sumvalue$RP.definition[sumvalue$RP_name=="MSY"|sumvalue$RP_name=="Revenue"] <- "Btarget0"
-  sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.6_lower"] <- "Blimit0"
-  sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.1_lower"] <- "Bban0"
+  sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.6_lower" |sumvalue$RP_name=="PGY_rev_0.6_lower"] <- "Blimit0"
+  sumvalue$RP.definition[sumvalue$RP_name=="PGY_0.1_lower"|sumvalue$RP_name=="PGY_rev_0.1_lower"] <- "Bban0"
   sumvalue <- sumvalue %>% select(1,ncol(sumvalue),2:(ncol(sumvalue)-1))
 
   Fvector <- select(sumvalue,num_range("F",0:40))

@@ -1263,7 +1263,7 @@ get.stat <- function(fout,eyear=0,tmp.year=NULL, use_new_output=FALSE){
   tc.mat  <- tmpfunc_(tc,  nage, agename, "TC")
 
   if("revaa_mat" %in% names(fout)){
-    reve <- fout$paa * fout$wcaa
+    reve <-  fout$wcaa * fout$paa 
     rev.mat <- tmpfunc_(reve, nage, agename, "REV")
     res.stat2 <- as.data.frame(t(c(tb.mat,ctb.mat,tc.mat,ssb.mat, rev.mat)))
     }else{
