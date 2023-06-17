@@ -1023,7 +1023,7 @@ future_vpa_R <- function(naa_mat,
         if(obj_stat==0) obj <- mean(spawner_mat[total_nyear,])
         if(obj_stat==1) obj <- geomean(spawner_mat[total_nyear,])
         if(obj_stat==2) obj <- median(spawner_mat[total_nyear,])
-        }else{#objective == 3 "Revenue" を最大化する時
+        }else{#objective == 3 "Revenue" を最大化する時とPGY_revを計算するとき
           if(!is.null(paa_mat) ){ 
             last_revenue <- colSums(revaa_mat[,total_nyear,])
             if(obj_stat < 2 ){
