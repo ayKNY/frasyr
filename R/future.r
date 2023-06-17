@@ -474,7 +474,7 @@ future_vpa <- function(tmb_data,
                        multi_init = 1,
                        multi_lower = 0.0001,
                        multi_upper = 10,
-                       objective ="MSY", # or PGY, percentB0, Bempirical, "Revenue"
+                       objective ="MSY", # or PGY, percentB0, Bempirical, "Revenue", "PGY_rev"
                        obj_value = 0,
                        obj_stat  ="mean",
                        do_MSE=NULL,
@@ -497,7 +497,8 @@ future_vpa <- function(tmb_data,
     dplyr::case_when(objective=="MSY"   ~ 0,
                      objective=="PGY"   ~ 1,
                      objective=="SSB"   ~ 2,
-                     objective == "Revenue" ~ 3)
+                     objective == "Revenue" ~ 3,
+                     objective == "PGY_rev" ~ 4)
   tmb_data$obj_stat <-
     dplyr::case_when(obj_stat=="mean"    ~ 0,
                      obj_stat=="geomean" ~ 1,
