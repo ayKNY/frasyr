@@ -1810,7 +1810,7 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
                                multi_upper=f_range[2],
                                compile=compile_tmb)
 
-  MSYstat <- res_future_MSY %>% get.stat_eco(use_new_output=TRUE) %>%
+  MSYstat <- res_future_MSY %>% get.stat(use_new_output=TRUE) %>%
     mutate(RP_name = objective)
   if(objective == "MSY"){
     PGY_denom <- MSYstat$catch.mean
