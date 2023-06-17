@@ -1815,31 +1815,34 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
     mutate(RP_name = objective)
   if(objective == "MSY"){
     PGY_denom <- MSYstat$catch.mean
+    PGY <- "PGY"
   }else{
-      if(objective == "Revenue"){PGY_denom <- MSYstat$rev.mean}
+      if(objective == "Revenue"){
+        PGY_denom <- MSYstat$rev.mean
+        PGY <- "PGY_rev"
+      }
     }
       # 他管理基準値を推定するためのオブジェクトを作っておく
     obj_mat <- NULL
     if(candidate_PGY[1]>0){
-
+      
         obj_mat <- bind_rows(obj_mat,
-                             tibble(RP_name    = str_c("PGY",candidate_PGY,"lower",sep="_"),
+                             tibble(RP_name    = str_c(PGY,candidate_PGY,"lower",sep="_"),
                                     obj_value  = candidate_PGY * PGY_denom,
                                     optim_method=optim_method,
                                     multi_init = res_future_MSY$multi*1.2,
                                     multi_lower= res_future_MSY$multi,
                                     multi_upper= 10,
-                                    objective="PGY"
+                                    objective= PGY
                                     ))
-
         if(only_lowerPGY=="both"){
-            obj_mat2 <- tibble(RP_name    = str_c("PGY",candidate_PGY,"upper",sep="_"),
+            obj_mat2 <- tibble(RP_name    = str_c(PGY,candidate_PGY,"upper",sep="_"),
                                obj_value  = candidate_PGY * PGY_denom,
                                optim_method=optim_method,
                                multi_init = res_future_MSY$multi*0.5,
                                multi_upper= res_future_MSY$multi,
                                multi_lower= 0.001,
-                               objective="PGY")
+                               objective=PGY)
             obj_mat <- bind_rows(obj_mat, obj_mat2)
         }
     }
@@ -1919,7 +1922,7 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
                           trace.multi2[which(mean(diff.trace)<diff.trace)] +
                           diff.trace[which(mean(diff.trace)<diff.trace)]/2) %>%
             sort()
-        trace_pre2 <- trace_future(data_future$data,
+        trace_pre2 <- trace_future(data_future$data, objective = objective ,
                                    trace.multi=trace.multi2, ncore=ncore)
         trace_pre <- bind_rows(trace_pre,trace_pre2)
         trace_pre <- trace_pre[!duplicated(trace_pre$ssb.mean),]
