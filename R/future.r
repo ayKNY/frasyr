@@ -586,8 +586,7 @@ future_vpa <- function(tmb_data,
   if(!is.null(SPRtarget)){
     if(is.null(calc_SPR_year_name)){
        calc_SPR_year <- 1:dim(res_future$faa)[[2]]
-    }
-    else{
+    }else{
        calc_SPR_year <- which(dimnames(res_future$faa)[[2]] %in% calc_SPR_year_name)
     }
 
@@ -612,7 +611,9 @@ future_vpa <- function(tmb_data,
                         SPRtarget=SPRtarget,
                         plus_group=tmb_data$plus_group)
         }
-      }}}
+      }
+    }
+    }
 
   res_future$summary <- derive_future_summary(res_future)
   return(res_future)
@@ -661,8 +662,7 @@ future_vpa_R <- function(naa_mat,
                          waa_catch_rand_mat = NULL,                         
                          maa_par_mat  = NULL, # option for maa_fun
                          maa_rand_mat = NULL,
-                         paa_mat = NULL
-){
+                         paa_mat = NULL){
 
   options(deparse.max.lines=10)
 
@@ -1038,7 +1038,8 @@ future_vpa_R <- function(naa_mat,
             }else{
               stop("paa_mat is needed")
             }
-          }
+        }
+    }
 
 
   {if(objective==0 | objective==3) {
@@ -2089,4 +2090,4 @@ est_MSYRP_proxy <- function(data_future,
   res_MSY$res_refF <- res_refF
 
   return(res_MSY)
-}
+  }
