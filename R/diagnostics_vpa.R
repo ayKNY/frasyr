@@ -743,7 +743,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025)*sigma, ymax = qnorm(0.025)*sigma), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1)*sigma, ymax = qnorm(0.1)*sigma), alpha=0.1)+
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",,axes="all_x")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -759,7 +759,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025), ymax = qnorm(0.025)), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1), ymax = qnorm(0.1)), alpha=0.1)+
       geom_point(aes(x=year, y=sd.resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",,axes="all_x")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -774,7 +774,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
   } else {
     g1 <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",,axes="all_x")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
