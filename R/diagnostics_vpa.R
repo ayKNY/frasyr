@@ -743,7 +743,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025)*sigma, ymax = qnorm(0.025)*sigma), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1)*sigma, ymax = qnorm(0.1)*sigma), alpha=0.1)+
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",,axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -753,12 +753,13 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                  mapping = aes(x = x, y = if(plot_scale)min(d_tidy$resid) else y,
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
-                 vjust="inward", hjust="inward")
+                 vjust="inward", hjust="inward")+
+	  guides(x=guide_axis(minor.ticks = TRUE))
     g1_sd <- ggplot(d_tidy) +
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025), ymax = qnorm(0.025)), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1), ymax = qnorm(0.1)), alpha=0.1)+
       geom_point(aes(x=year, y=sd.resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",,axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -768,11 +769,12 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                  mapping = aes(x = x, y = if(plot_scale)min(d_tidy$sd.resid) else y.sd,
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
-                 vjust="inward", hjust="inward")
+                 vjust="inward", hjust="inward")+
+	  guides(x=guide_axis(minor.ticks = TRUE))
   } else {
     g1 <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",,axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -782,10 +784,11 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                  mapping = aes(x = x, y = if(plot_scale)min(d_tidy$resid) else y,
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
-                 vjust="inward", hjust="inward")
+                 vjust="inward", hjust="inward")+
+	  guides(x=guide_axis(minor.ticks = TRUE))
     g1_sd <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=sd.resid, colour = Index_Label), size = 2) +
-      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free")+
+      facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
       xlim(xlim_year) +
@@ -795,7 +798,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                  mapping = aes(x = x, y = if(plot_scale)min(d_tidy$sd.resid) else y.sd,
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
-                 vjust="inward", hjust="inward")
+                 vjust="inward", hjust="inward")+
+	  guides(x=guide_axis(minor.ticks = TRUE))
   }
   if(plot_smooth) g1 <- g1 + geom_smooth(aes(x=year, y=resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
   if(plot_smooth) g1_sd <- g1_sd + geom_smooth(aes(x=year, y=sd.resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
@@ -807,7 +811,9 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
     xlim(xlim_year) + ylim(0, NA) +
     ylab("Abundance index") +
     xlab("Year") +
-    theme_SH(base_size = 14)
+    theme_SH(base_size = 14)+
+	  guides(x=guide_axis(minor.ticks = TRUE))
+	  
 
   # 資源量と指数の（非）線形性のプロット
   Lab_tmp <- unique(d_tidy$Index_Label)
