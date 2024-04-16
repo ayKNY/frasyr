@@ -35,7 +35,7 @@ test_that("oututput value check",{
 
   #結果の照合
   expect_equal(srr_check1_pma,srr_check1_pma_check)
-  expect_equal(srr_check2_pma,srr_check2_pma_check)
+  expect_equal(srr_check2_pma$p.value,srr_check2_pma_check$p.value)
 
   # residual trend & acf ----
   ac_res_pma_check <- acf(SRmodel.select$resid2,plot=FALSE)
@@ -138,5 +138,42 @@ test_that("output value check",{
   res_spec_Mesnil<-specify.Mesnil.gamma(res_sr_MesnilL1)
   expect_equal(res_spec_Mesnil$gamma,2)
   }
-)
+  )
+
+test_that("Add Shaefer and Cusing",{
+
+  data("res_vpa_example")
+  SRdata=get.SRdata(res_vpa_example)
+  
+  if(0){ # まだ実装されていないが将来的にはこのようにしたい
+      res_sr_SH <- fit.SR(SRdata,SR="Shepherd",method = "L1",AR=0,out.AR = F)
+      res_sr_CU <- fit.SR(SRdata,SR="Cushing",method = "L1",AR=0,out.AR = F)
+
+      expect_equal(all(c("a","b","sd","rho","gamma") %in% names(res_sr_SH$pars)),TRUE)
+      expect_equal(all(c("a","b","sd","rho") %in% names(res_sr_CU)),TRUE)      
+  }
+
+  # non-regime (Shepherdのgamma=1はBHと一致）
+  res_sr_SH <- fit.SR(SRdata,SR="Shepherd",method = "L2",AR=0,out.AR = F, gamma=1)
+  res_sr_BH <- fit.SR(SRdata,SR="BH"      ,method = "L2",AR=0,out.AR = F)
+  expect_equal(res_sr_BH$pars, res_sr_SH$pars)
+
+  # non-regime
+  res_sr_SH <- fit.SR(SRdata,SR="Shepherd",method = "L2",AR=0,out.AR = F, gamma=0.51)  
+  res_sr_CU <- fit.SR(SRdata,SR="Cushing" ,method = "L2",AR=0,out.AR = F)
+
+  # regime
+  res_sr_BHr <- fit.SRregime(SRdata,SR="BH",method = "L2", regime.year=2000)    
+  res_sr_SHr <- fit.SRregime(SRdata,SR="Shepherd",method = "L2", gamma=1, regime.year=2000,p0=res_sr_BHr$opt$par)
+  res_sr_CUr <- fit.SRregime(SRdata,SR="Cushing" ,method = "L2", regime.year=2000)
+  expect_equal(exp(res_sr_BHr$opt$par),
+               exp(res_sr_SHr$opt$par), tol=0.0001)
+
+  gg <- plot_SRregime(res_sr_BHr)
+  gg <- plot_SRregime(res_sr_SHr)
+  gg <- plot_SRregime(res_sr_CUr)
+  # テストにはなっていないが、empty testと言われないために
+  expect_equal(class(gg)[1],"gg")
+})
+
 

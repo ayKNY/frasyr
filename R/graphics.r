@@ -38,6 +38,7 @@ theme_SH <- function(legend.position="none",base_size=12){
 			axis.minor.ticks.length = rel(0.5))
 
 #  }
+
 }
 
 #' 会議用の図の出力関数（大きさ・サイズの指定済）：通常サイズ
@@ -355,6 +356,13 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   if (SR_result$input$SR=="BH") SRF <- function(SSB,a,b,recruit_intercept=0) (a*SSB*xscale/(1+b*SSB*xscale)+recruit_intercept)/yscale
   if (SR_result$input$SR=="RI") SRF <- function(SSB,a,b,recruit_intercept=0) (a*SSB*xscale*exp(-b*SSB*xscale)+recruit_intercept)/yscale
   if (SR_result$input$SR=="Mesnil") SRF <- function(SSB,a,b,gamma) (0.5*a*(SSB*xscale+sqrt(b^2+gamma^2/4)-sqrt((SSB*xscale-b)^2+gamma^2/4))+recruit_intercept)/yscale
+  if (SR_result$input$SR=="Shepherd") SRF <- function(SSB,a,b,gamma,recruit_intercept=0) (a*SSB*xscale/(1+(b*SSB*xscale)^gamma)+recruit_intercept)/yscale
+  if (SR_result$input$SR=="Cushing") SRF <- function(SSB,a,b,recruit_intercept=0) (a*(SSB*xscale)^b+recruit_intercept)/yscale
+  if (SR_result$input$SR=="BHS") SRF <- function(SSB,a,b,gamma){
+    SSB <- SSB*xscale
+    res <- ifelse(SSB < b, a*b*(SSB/b)^{1-(SSB/b)^gamma}, a*b)
+    return(res/yscale)    
+}
 
 
   SRF_CI <- function(CI,sigma,sign,...){
@@ -395,7 +403,9 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   if(is.null(labeling.year)) labeling.year <- c(tmp[tmp%%5==0],year.max)
     alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
 
-  if(SR_result$input$SR!="Mesnil"){
+  use_gamma <- SR_result$input$SR %in% c("Mesnil", "Shepherd", "BHS")
+
+  if(!use_gamma){
     g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
       stat_function(fun=SRF,args=list(a=SR_result$pars$a,
                                       b=SR_result$pars$b),color="deepskyblue3",lwd=1.3,
@@ -411,7 +421,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   if(!is.null(add_graph)) g1 <- g1+add_graph
 
   if(isTRUE(plot_CI)){
-    if(SR_result$input$SR!="Mesnil"){
+    if(!use_gamma){
       g1 <- g1+
         stat_function(fun=SRF_CI,
                       args=list(a=SR_result$pars$a,
@@ -493,7 +503,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   }
 
   if(recruit_intercept>0){
-    if(SR_result$input$SR!="Mesnil"){
+    if(!use_gamma){
       g1 <- g1+stat_function(fun=SRF,
                              args=list(a=SR_result$pars$a,
                                        b=SR_result$pars$b,
@@ -859,7 +869,7 @@ plot_futures <- function(vpares=NULL,
     #    require(tidyverse,quietly=TRUE)
 
     rename_list <- tibble(stat=c("Recruitment","SSB","biomass","cbiomass","catch","beta_gamma","U","Fratio"),
-                          jstat=c(str_c("Recruits(",number_name,"fish)"),
+                          jstat=c(str_c("Recruits(",number.name,"fish)"),
                                   str_c("SB (",junit,"MT)"),
                                   str_c("Biomass (",junit,"MT)"),
                                   str_c("cBiomass (",junit,"MT)"),
@@ -1019,20 +1029,20 @@ plot_futures <- function(vpares=NULL,
     xlab("年")+ylab("")+ labs(fill = "",linetype="",color="")+
     xlim(minyear,maxyear)
 
-  if("SSB" %in% what.plot){
+  if("SSB" %in% what.plot && Btarget*Blimit*Bban>0){
     g1 <- g1 + geom_hline(data = ssb_RP,
                           aes(yintercept = value,linetype=RP_name),
 						  color = c(col.SBtarget, col.SBlim, col.SBban))+
 						  scale_linetype_manual(name="",values=c("solid","dashed",unlist(format_type()[1,3])[[1]],unlist(format_type()[1,3])[[1]],unlist(format_type()[3,3])[[1]],unlist(format_type()[2,3])[[1]],unlist(format_type()[1,3])[[1]]))
   }
 
-  if("catch" %in% what.plot){
+  if("catch" %in% what.plot && MSY!=0 ){
     g1 <- g1 + geom_hline(data = catch_RP,
                           aes(yintercept = value, linetype = RP_name),
                           color = c(col.MSY))
   }
 
-  if("U" %in% what.plot){
+  if("U" %in% what.plot && Umsy!=0){
     g1 <- g1 + geom_hline(data = U_RP,
                           aes(yintercept = value, linetype = RP_name),
                           color = c(col.MSY))
@@ -1056,14 +1066,26 @@ plot_futures <- function(vpares=NULL,
     g1 <- g1+scale_alpha_discrete(guide="none")
   }
 
-  caption_string <- str_c("(塗り:", CI_range[1]*100,"-",CI_range[2]*100,
-                         "%予測区間, ",
+  if(!exclude.japanese.font){
+    caption_string <- str_c("(塗り:", CI_range[1]*100,"-",CI_range[2]*100,
+                          "%予測区間, ",
                          ifelse(average_lwd < example_width, "細い", "太い"),
                          "実線: 平均値",
                          dplyr::case_when(n_example>0 & example_width < average_lwd ~ ", 細い実線: シミュレーションの1例)",
                                           n_example>0 & example_width > average_lwd ~ ", 太い実線: シミュレーションの1例)",
                                           n_example>0 & example_width == average_lwd ~ ", 薄い実線: シミュレーションの1例)",
                                           TRUE ~ ")"))
+  }
+  else{
+    caption_string <- str_c("(Fill:", CI_range[1]*100,"-",CI_range[2]*100,
+                          "%prediction interval, ",
+                         ifelse(average_lwd < example_width, "thin", "thick"),
+                         "sold line: average",
+                         dplyr::case_when(n_example>0 & example_width < average_lwd ~ ", thin solid line: an example in the simulation)",
+                                          n_example>0 & example_width > average_lwd ~ ", bold solid line: an example in the simulation)",
+                                          n_example>0 & example_width == average_lwd ~ ", pale solid line: an example in the simulation)",
+                                          TRUE ~ ")"))
+  }
 
   g1 <- g1 + guides(lty=guide_legend(ncol=3),
                     fill=guide_legend(ncol=3),
@@ -2122,4 +2144,20 @@ plot_worm <- function(kobe_data){
 
     g_worm
 
+}
+
+#' サブ目盛りの追加
+#' 
+#' @export
+#' 
+
+apply_minor_ticks <- function(plot, minor_breaks=1){
+  plot +   # サブ目盛の設定
+    guides(x=guide_axis(minor.ticks=TRUE), # guideは凡例を制御するための関数。目盛りのスタイルを設定するのはtheme関数だが、どんな目盛りをつけるかはguidesの範疇になる？
+           y=guide_axis(minor.ticks=TRUE)) + 
+    # サブ目盛りをつけるので、目盛りの長さを少し長くし、線幅を狭くする
+    theme(axis.ticks.length=unit(0.17,"cm"), # default=unit(0.15,"cm")
+          axis.ticks=element_line(linewidth=0.4)) + # default=0.5
+    # サブ目盛りの間隔の設定
+    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))
 }
