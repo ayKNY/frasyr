@@ -35,8 +35,6 @@ theme_SH <- function(legend.position="none",base_size=12){
             axis.line.x=element_line(size= 0.3528),
             axis.line.y=element_line(size= 0.3528),
             legend.position=legend.position)
-
-#  }
 }
 
 #' 会議用の図の出力関数（大きさ・サイズの指定済）：通常サイズ
@@ -2142,4 +2140,20 @@ plot_worm <- function(kobe_data){
 
     g_worm
 
+}
+
+#' サブ目盛りの追加
+#' 
+#' @export
+#' 
+
+apply_minor_ticks <- function(plot, minor_breaks=1){
+  plot +   # サブ目盛の設定
+    guides(x=guide_axis(minor.ticks=TRUE), # guideは凡例を制御するための関数。目盛りのスタイルを設定するのはtheme関数だが、どんな目盛りをつけるかはguidesの範疇になる？
+           y=guide_axis(minor.ticks=TRUE)) + 
+    # サブ目盛りをつけるので、目盛りの長さを少し長くし、線幅を狭くする
+    theme(axis.ticks.length=unit(0.17,"cm"), # default=unit(0.15,"cm")
+          axis.ticks=element_line(linewidth=0.4)) + # default=0.5
+    # サブ目盛りの間隔の設定
+    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))
 }
