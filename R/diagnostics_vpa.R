@@ -708,7 +708,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                 names_sep = "_",
                                 values_drop_na = TRUE
   )
-
+ 
   if(!is.null(index_name)){
     if(!length(index_name) == length(res$q)) stop(paste0("Length of index_name was different to the number of indices"))
     d_tidy$Index_Label <- rep(index_name, nrow(d_tmp))
@@ -737,7 +737,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
   # 残差プロットに追加する観測誤差と自己相関係数のtidy data
   rho_data <- tibble(Index_Label = unique(d_tidy$Index_Label), sigma = res$sigma, ar1 = rho.numeric, signif = signif.numeric) %>%
     mutate(y = thred_y[y.posi_rho_data], x = xlim_year[1], y.sd = sd.thred_y[sd.y.posi_rho_data])
-
+ 
   if(isTRUE(resid_CI)){
     g1 <- ggplot(d_tidy) +
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025)*sigma, ymax = qnorm(0.025)*sigma), alpha=0.05)+
@@ -754,7 +754,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
-	  guides(x=guide_axis(minor.ticks = TRUE))
+	  guides(x=guide_axis(minor.ticks = TRUE))+
+	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
     g1_sd <- ggplot(d_tidy) +
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025), ymax = qnorm(0.025)), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1), ymax = qnorm(0.1)), alpha=0.1)+
@@ -770,7 +771,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
-	  guides(x=guide_axis(minor.ticks = TRUE))
+	  guides(x=guide_axis(minor.ticks = TRUE))+
+	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
   } else {
     g1 <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
@@ -785,7 +787,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
-	  guides(x=guide_axis(minor.ticks = TRUE))
+	  guides(x=guide_axis(minor.ticks = TRUE))+
+	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
     g1_sd <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=sd.resid, colour = Index_Label), size = 2) +
       facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",axes="all_x")+
@@ -799,7 +802,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                label = str_c("sigma=", round(sigma,2),
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
-	  guides(x=guide_axis(minor.ticks = TRUE))
+	  guides(x=guide_axis(minor.ticks = TRUE))+
+	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
   }
   if(plot_smooth) g1 <- g1 + geom_smooth(aes(x=year, y=resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
   if(plot_smooth) g1_sd <- g1_sd + geom_smooth(aes(x=year, y=sd.resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
@@ -812,8 +816,8 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
     ylab("Abundance index") +
     xlab("Year") +
     theme_SH(base_size = 14)+
-	  guides(x=guide_axis(minor.ticks = TRUE))
-	  
+	guides(x=guide_axis(minor.ticks = TRUE))+
+	scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
 
   # 資源量と指数の（非）線形性のプロット
   Lab_tmp <- unique(d_tidy$Index_Label)
