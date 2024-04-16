@@ -2146,7 +2146,10 @@ plot_worm <- function(kobe_data){
 
 }
 
+#'
 #' サブ目盛りの追加
+#'
+#' 将来予測の図に最適化された設定です
 #' 
 #' @export
 #' 
@@ -2159,5 +2162,7 @@ apply_minor_ticks <- function(plot, minor_breaks=1){
     theme(axis.ticks.length=unit(0.17,"cm"), # default=unit(0.15,"cm")
           axis.ticks=element_line(linewidth=0.4)) + # default=0.5
     # サブ目盛りの間隔の設定
-    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))
+    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks),
+                       breaks      =scales::breaks_pretty())
+#    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))  
 }
