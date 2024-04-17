@@ -44,9 +44,16 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - uses: r-lib/actions/check-r-package@v2
-        with:
-          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
-	  error-on:'"warning"'
-	  upload-snapshot: true
+#      - uses: r-lib/actions/check-r-package@v2
+#        with:
+#          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+#	  error-on:'"warning"'
+#	  upload-snapshot: true
+
+   - name: Check
+        env:
+          _R_CHECK_CRAN_INCOMING_REMOTE_: false
+        run: rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "error", check_dir = "check")
+        shell: Rscript {0}
+	
 
