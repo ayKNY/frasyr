@@ -45,7 +45,7 @@ jobs:
           needs: check
 
 #      - uses: r-lib/actions/check-r-package@v2
-      - uses: action
+      - uses: tmp/action
         with:
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
 	  error-on: '"error"'
