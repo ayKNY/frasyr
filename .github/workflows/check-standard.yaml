@@ -48,6 +48,6 @@ jobs:
       - uses: tmp/action
         with:
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
-	  error-on: '"error"'
+#	  error-on: '"error"'
 	  upload-snapshot: true
 
