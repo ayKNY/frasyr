@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, master, tmpXX]
   pull_request:
-#    branches: [main, master]
+    branches: [main, master]
 
 name: R-CMD-check
 
@@ -49,3 +49,4 @@ jobs:
           upload-snapshots: false
 	  error-on: '"error"'
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+#	  error-on: '"error"'	  
