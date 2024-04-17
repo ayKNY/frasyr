@@ -44,11 +44,10 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - uses: r-lib/actions/check-r-package@v2
+#      - uses: r-lib/actions/check-r-package@v2
+      - uses: action
         with:
-#          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
-#	  error-on:'"warning"'
-          args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
 	  error-on: '"error"'
 	  upload-snapshot: true
 
