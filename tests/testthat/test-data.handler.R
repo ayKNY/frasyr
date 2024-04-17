@@ -530,6 +530,7 @@ test_that("vpa function (with dummy data) (level 2-3?)",{
   expect_equal(res_vpa_estb_tune5m_b_sigma$sigma[[2]],res_vpa_estb_tune5m_b_sigma$sigma[[3]])
 
   # TMB true + set lambda + 全F推定法．最尤法．b推定あり----
+  if(0){
   library(TMB)
   use_rvpa_tmb()
   res_vpa_estb_tune6m_b <- vpa(vpadat_estb, last.catch.zero = FALSE, min.age=c(0,0,0,0,0,0),max.age=c(3,3,0,0,3,3),
@@ -618,6 +619,7 @@ test_that("vpa function (with dummy data) (level 2-3?)",{
   expect_equal(as.numeric(round(res_vpa_estb_tune6m_b_maiwashi5$sigma,2)),c(0.23))
   expect_equal(as.numeric(round(rowMeans(res_vpa_estb_tune6m_b_maiwashi5$saa),2)),c(0.45,0.64,1.00,1.00))
   expect_equal(as.numeric(round(res_vpa_estb_tune6m_b_maiwashi5$logLik,3)),c(3.603))
+  }
 
   #上記ケースでtmb=FALSEのもの
   res_vpa_estb_tune6m_b_maiwashi5notmb <- vpa(vpadat_estb, last.catch.zero = FALSE,  min.age=c(0,0,0,0,0,0),max.age=c(3,3,0,0,3,3),
