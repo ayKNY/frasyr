@@ -47,5 +47,6 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         with:
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
-	  error-on: '"warning"'	  
+	  error-on:'"warning"'
+	  upload-snapshot: true
 
