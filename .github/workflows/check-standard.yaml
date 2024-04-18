@@ -44,7 +44,7 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - uses: ichimomo/actions/<check-r-package@v2-branch
+      - uses: ichimomo/actions/check-r-package@v2-branch
         with:
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
 #	  upload_snapshots:true		  
