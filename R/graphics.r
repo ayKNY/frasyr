@@ -69,6 +69,7 @@ ggsave_SH_large <- function(...){
 #' @param legend.position 凡例の位置。"top" (上部), "bottom" (下部), "left" (左), "right" (右), "none" (なし)。
 #' @param vpaname 凡例につけるVPAのケースの名前。vpalistと同じ長さにしないとエラーとなる
 #' @param ncol 図の列数
+#' @param is_minor_ticks 補助目盛りをつける場合はTRUE。デフォルトはTRUE
 #'
 #' @examples
 #' \dontrun{
@@ -94,7 +95,8 @@ plot_vpa <- function(vpalist,
                      legend.position = "top",
                      vpaname = NULL,
                      ncol = 2,
-                     scale_value = NULL # 浜辺加筆(2020/07/29)
+                     scale_value = NULL, # 浜辺加筆(2020/07/29)
+                     is_minor_ticks=TRUE
                      ){
 
   if(!is.null(vpaname)){
@@ -169,7 +171,8 @@ plot_vpa <- function(vpalist,
     g2 <- g1
   } # もし動かない場合はこれまで通りに作図(浜辺'20/06/30)
 
-  g2
+  if(is_minor_ticks==TRUE) g2 <- apply_minor_ticks(g2)
+  return(g2)
 }
 
 #' F currentをプロットする

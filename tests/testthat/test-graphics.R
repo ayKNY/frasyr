@@ -23,8 +23,8 @@ test_that("plot.future",{
 })
 
 test_that("plot_vpa",{
-  g1 <- plot_vpa(res_vpa_example)
-  g2 <- plot_vpa(list(res_vpa_example,res_vpa_example))
+  g1 <- plot_vpa(res_vpa_example) 
+  g2 <- plot_vpa(list(res_vpa_example,res_vpa_example), is_minor_ticks=FALSE)
   expect_equal(class(g1)[1],"gg")
   expect_equal(class(g2)[1],"gg")
 })
