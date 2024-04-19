@@ -782,11 +782,11 @@ plot_SRregime <- function(...){
 #' @param biomass.unit 量の単位
 #' @param number.name 尾数の凡例をどのように表示するか（「億尾」とか）
 #' @param RP_name 管理基準値をどのように名前つけるか
-#' @param Btarget Btargetの値
-#' @param Blimit Blimitの値
-#' @param Bban Bbanの値
-#' @param MSY MSYの値
-#' @param Umsy  Umsyの値
+#' @param Btarget Btargetの値、設定しない場合はNA（デフォルトはNA）
+#' @param Blimit Blimitの値、設定しない場合はNA（デフォルトはNA）
+#' @param Bban Bbanの値、設定しない場合はNA（デフォルトはNA）
+#' @param MSY MSYの値、設定しない場合はNA（デフォルトはNA）
+#' @param Umsy  Umsyの値、設定しない場合はNA（デフォルトはNA）
 #' @param SPRtarget MSYのときのSPRの値
 #' @param exclude.japanese.font 日本語を図中に表示しない
 #' @param font.size フォントの大きさ
@@ -812,8 +812,8 @@ plot_futures <- function(vpares=NULL,
                          number.unit=1,
                          number.name="",
                          RP_name=c("Btarget","Blimit","Bban"),
-                         Btarget=0,Blimit=0,Bban=0,#Blow=0,
-                         MSY=0,Umsy=0,
+                         Btarget=NA,Blimit=NA,Bban=NA,#Blow=0,
+                         MSY=NA,Umsy=NA,
                          SPRtarget=NULL,
                          exclude.japanese.font=FALSE, # english version
                          average_lwd=1,
@@ -974,23 +974,30 @@ plot_futures <- function(vpares=NULL,
   dummy     <- left_join(dummy,rename_list,by="stat") %>% dplyr::filter(!is.na(stat))
   dummy2    <- left_join(dummy2,rename_list,by="stat") %>% dplyr::filter(!is.na(stat))
 
-  if("SSB" %in% what.plot){
-    ssb_RP <- tibble(jstat = dplyr::filter(rename_list, stat == "SSB") %>%
-                       dplyr::pull(jstat),
-                     value = c(Btarget, Blimit, Bban) / biomass.unit,
-                     RP_name = RP_name)
+  dat_RP <- tibble(jstat=NULL, value=NULL, RP_name=NULL)
+  if("SSB" %in% what.plot && (!is.na(Btarget) || !is.na(Blimit) || !is.na(Bban))){
+    dat_RP <- bind_rows(dat_RP, 
+                        tibble(jstat = dplyr::filter(rename_list, stat == "SSB") %>%
+                                 dplyr::pull(jstat),
+                               value = c(Btarget, Blimit, Bban) / biomass.unit,
+                               RP_name = RP_name,
+                               name = c("target","limit","ban")))
   }
-  if("catch" %in% what.plot){
-    catch_RP <- tibble(jstat=dplyr::filter(rename_list, stat == "catch") %>%
-                         dplyr::pull(jstat),
-                       value=MSY/biomass.unit,
-                       RP_name="MSY")
+  if("catch" %in% what.plot && !is.na(MSY)){
+    dat_RP <- bind_rows(dat_RP,
+                        tibble(jstat=dplyr::filter(rename_list, stat == "catch") %>%
+                                 dplyr::pull(jstat),
+                               value=MSY/biomass.unit,
+                               RP_name="MSY",
+                               name="target"))
   }
-  if("U" %in% what.plot){
-    U_RP <- tibble(jstat=dplyr::filter(rename_list, stat == "U") %>%
-                     dplyr::pull(jstat),
-                   value=Umsy,
-                   RP_name="U_MSY")
+  if("U" %in% what.plot && !is.na(Umsy)){
+    dat_RP <- bind_rows(dat_RP, 
+                        U_RP <- tibble(jstat=dplyr::filter(rename_list, stat == "U") %>%
+                                         dplyr::pull(jstat),
+                                       value=Umsy,
+                                       RP_name="U_MSY",
+                                       name="target"))
   }
 
   options(warn=org.warn)
@@ -1032,11 +1039,21 @@ plot_futures <- function(vpares=NULL,
     xlab("年")+ylab("")+ labs(fill = "",linetype="",color="")+
     xlim(minyear,maxyear)
 
+  if(nrow(dat_RP)>0){
+    dat_RP <- dat_RP %>% left_join(format_type()) 
+    browser()
+    g1 <- g1 + geom_hline(data = dat_RP,
+                          aes(yintercept = value, lty=name, color=name))+
+      scale_linetype_identity() +
+      scale_color_identity()  
+  }
+  
+  if(0){
   if("SSB" %in% what.plot && Btarget*Blimit*Bban>0){
     g1 <- g1 + geom_hline(data = ssb_RP,
                           aes(yintercept = value,linetype=RP_name),
-						  color = c(col.SBtarget, col.SBlim, col.SBban))+
-						  scale_linetype_manual(name="",values=c("solid","dashed",unlist(format_type()[1,3])[[1]],unlist(format_type()[1,3])[[1]],unlist(format_type()[3,3])[[1]],unlist(format_type()[2,3])[[1]],unlist(format_type()[1,3])[[1]]))
+                          color = c(col.SBtarget, col.SBlim, col.SBban))+
+        scale_linetype_manual(name="",values=c("solid","dashed",unlist(format_type()[1,3])[[1]],unlist(format_type()[1,3])[[1]],unlist(format_type()[3,3])[[1]],unlist(format_type()[2,3])[[1]],unlist(format_type()[1,3])[[1]]))
   }
 
   if("catch" %in% what.plot && MSY!=0 ){
@@ -1049,6 +1066,7 @@ plot_futures <- function(vpares=NULL,
     g1 <- g1 + geom_hline(data = U_RP,
                           aes(yintercept = value, linetype = RP_name),
                           color = c(col.MSY))
+  }
   }
 
   if(n_example>0){
