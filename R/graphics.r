@@ -982,8 +982,8 @@ plot_futures <- function(vpares=NULL,
                         tibble(jstat = dplyr::filter(rename_list, stat == "SSB") %>%
                                  dplyr::pull(jstat),
                                value = c(Btarget, Blimit, Bban) / biomass.unit,
-                               RP_name = RP_name,
-                               scenario = c("target","limit","ban")))
+                               RP_type = c("target","limit","ban"),
+                               scenario = RP_name))
   }
   if("catch" %in% what.plot && !is.na(MSY)){
     dat_RP <- bind_rows(dat_RP,
@@ -991,7 +991,7 @@ plot_futures <- function(vpares=NULL,
                                  dplyr::pull(jstat),
                                value=MSY/biomass.unit,
                                RP_name="MSY",
-                               scenario="target"))
+                               scenario="MSY"))
   }
   if("U" %in% what.plot && !is.na(Umsy)){
     dat_RP <- bind_rows(dat_RP, 
@@ -999,7 +999,7 @@ plot_futures <- function(vpares=NULL,
                                          dplyr::pull(jstat),
                                        value=Umsy,
                                        RP_name="U_MSY",
-                                       scenario="target"))
+                                       scenario="U_MSY"))
   }
   dat_RP <- dat_RP %>% mutate(type="RP")
 
@@ -1013,25 +1013,55 @@ plot_futures <- function(vpares=NULL,
   alldata <- bind_rows(future_tibble.qt, future.example) %>%
     dplyr::filter(!is.na(stat) & year %in% minyear:maxyear) %>%
     bind_rows(dat_RP) %>% #future_tibble.qt %>% dplyr::filter(!is.na(stat)) %>%
-    group_by(scenario) %>% mutate(scenario=factor(scenario)) 
+    group_by(scenario) %>% mutate(scenario=factor(scenario))
 
-  g1 <- alldata %>% ggplot()
+  # define style
+  # definition of colors an line type
+  ggColorHue <- function(n, l=65) {
+    hues <- seq(15, 375, length=n+1)
+    hcl(h=hues, l=l, c=100)[1:n]
+  }
+
+  # definition of colors and line type
+  all_scenario <- unique(alldata$scenario)
+  col_type <- tibble(scenario=all_scenario) %>%
+    left_join(dat_RP) %>%
+    left_join(rename(format_type(), RP_type=name))
+  col_type$col[col_type$scenario=="VPA"] <- "black"
+  col_type$lty[col_type$scenario=="VPA"] <- "solid"  
+  col_type$col[col_type$scenario=="MSY"] <- "#000001" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
+  col_type$col[col_type$scenario=="U_MSY"] <- "#000002" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
+  col_type$lty[col_type$scenario=="MSY"] <- "dashed" # blackとは微妙に違った色にする
+  col_type$lty[col_type$scenario=="U_MSY"] <- "dashed" # blackとは微妙に違った色にする  
+  tmp <- which(is.na(col_type$col))
+  col_type$col[tmp] <- ggColorHue(n=length(tmp))
+  col_type$lty[tmp] <- "solid"
+  col_vector <- col_type$col %>% as.character()
+#  lty_vector <- col_type$lty %>% as.character()
+#  names(lty_vector) <- names(col_vector) <- col_type$scenario
+#  col_type <- col_type %>% left_join(dat_RP) %>%
+#    mutate(RP_name = ifelse(is.na(RP_name), scenario, RP_name))
+#  browser()
+  
+  alldata <- alldata %>% left_join(col_type %>% select(scenario, col, lty))
+
+  g1 <- alldata %>% ggplot() # aes(color=scenario, lty=scenario) とここで一括して指定すればよさげに思えるがそうするとうまくいかない
 
   if(isTRUE(is.plot.CIrange)){
     # draw prediction interval    
     if (isTRUE(is.plot.CIline)) {
       g1 <- g1+
         geom_line(data=. %>% dplyr::filter(type=="future"),
-                  mapping=aes(x=year,y=high,lty=scenario,color=scenario,group=scenario))+
+                  mapping=aes(x=year,y=high,lty=lty,color=col,group=scenario))+
         geom_line(data=. %>% dplyr::filter(type=="future"),
-                  mapping=aes(x=year,y=low,lty=scenario,color=scenario, group=scenario))
+                  mapping=aes(x=year,y=low,lty=lty,color=col, group=scenario))
     }
     # draw future projection results
     g1 <- g1 +
       geom_ribbon(data=. %>% dplyr::filter(type=="future"),
-                  mapping=aes(x=year,ymin=low,ymax=high,fill=scenario),alpha=0.4)+
+                  mapping=aes(x=year,ymin=low,ymax=high,fill=col),alpha=0.4)+
       geom_line(data= . %>% dplyr::filter(type=="future"),
-                mapping=aes(x=year,y=mean,color=scenario),lwd=average_lwd)
+                mapping=aes(x=year,y=mean,color=col),lwd=average_lwd,lty=1)
   }
 
   # apply dummy data
@@ -1045,7 +1075,7 @@ plot_futures <- function(vpares=NULL,
   # draw reference points
   if(nrow(dat_RP)>0){
     g1 <- g1 + geom_hline(data = . %>% dplyr::filter(type=="RP"),
-                          aes(yintercept = value, lty=scenario, color=scenario))
+                          aes(yintercept = value, lty=lty, color=col))
   }
 
   # draw examples
@@ -1054,13 +1084,13 @@ plot_futures <- function(vpares=NULL,
       g1 <- g1 + geom_line(data=. %>% dplyr::filter(type=="example"),
                            mapping=aes(x=year,y=value,
                                        alpha=factor(sim),
-                                       color=scenario),
+                                       color=col),
                            lwd=example_width)
     }
     else{
       g1 <- g1 + geom_line(data=. %>% dplyr::filter(type=="example"),
                            mapping=aes(x=year,y=value,
-                                       color=scenario),
+                                       color=col),
                            lwd=example_width)
     }
     g1 <- g1+scale_alpha_discrete(guide="none")
@@ -1089,41 +1119,24 @@ plot_futures <- function(vpares=NULL,
 
   g1 <- g1 +
     geom_line(data=. %>% dplyr::filter(scenario=="VPA"),
-              mapping=aes(x=year,y=mean, color=scenario),lwd=1, show.legend=FALSE)# VPAのプロット
-
-  # definition of colors an line type
-  ggColorHue <- function(n, l=65) {
-    hues <- seq(15, 375, length=n+1)
-    hcl(h=hues, l=l, c=100)[1:n]
-  }
-
-  # definition of colors and line type
-  all_scenario <- unique(future_tibble.qt$scenario) %>% as.character()
-  if(nrow(dat_RP)>0) all_scenario <- c(all_scenario, unique(dat_RP$scenario))
-  col_type <- tibble(scenario=all_scenario) %>%
-    left_join(rename(format_type(), scenario=name))
-  col_type$col[col_type$scenario=="VPA"] <- "black"
-  col_type$lty[col_type$scenario=="VPA"] <- "solid"
-  tmp <- which(is.na(col_type$col))
-  col_type$col[tmp] <- ggColorHue(n=length(tmp))
-  col_type$lty[tmp] <- "solid"
-  col_vector <- col_type$col %>% as.character()
-  lty_vector <- col_type$lty %>% as.character()
-  names(lty_vector) <- names(col_vector) <- col_type$scenario
-  col_type <- col_type %>% left_join(dat_RP) %>%
-    mutate(RP_name = ifelse(is.na(RP_name), scenario, RP_name))
+              mapping=aes(x=year, y=mean, color=col, lty=lty),lwd=1) # VPAのプロット
 
   # setting scales and guides
   g1 <- g1 + guides(lty=guide_legend(ncol=2),
-                    fill=guide_legend(ncol=2),
-                    col=guide_legend(ncol=2))+
-    theme_SH(base_size=font.size,legend.position=legend.position)+
-    theme(legend.key.width=unit(1,"cm")) +    
-    scale_color_hue(l=40)+
-    scale_color_manual   (values=col_vector)+#, label=col_type$RP_name) +
-    scale_fill_manual    (values=col_vector)+#, label=col_type$RP_name) +      
-    scale_linetype_manual(values=lty_vector)+#, label=col_type$RP_name) +  
-    xlab("年")+ylab("") + labs(fill = "",linetype="",color="")    
+                     fill=guide_legend(ncol=1),
+                     col=guide_legend(ncol=2))+
+     theme_SH(base_size=font.size,legend.position=legend.position)+
+     theme(legend.key.width=unit(1.2,"cm")) +    
+  ##   scale_color_manual(values=col_vector, label=col_type$RP_name) +
+  ##   scale_fill_manual    (values=col_vector)+#, label=col_type$RP_name) +      
+  ##   scale_linetype_manual(values=lty_vector)+#, label=col_type$RP_name) +
+    scale_color_identity(guide="legend", labels=col_type$scenario, breaks=col_type$col) +
+    scale_linetype_identity(guide="legend") +
+    scale_fill_identity(guide="legend", labels=col_type$scenario, breaks=col_type$col)+
+    guides(color=guide_legend(ncol=2, override.aes=list(linetype=col_type$lty, color=col_type$col, lwd=0.7)),
+           lty="none") +
+  xlab("年")+ylab("") + labs(fill = "",linetype="",color="")
+  
   return(g1)
 }
 
