@@ -2,13 +2,18 @@
 
 # 色や線の太さの設定・会議用の図の設定 ----
 
-col.SBtarget    <- "#00533E"
-col.SBlim       <- "#edb918"
-col.SBlimit     <- "#edb918"
-col.SBban       <- "#C73C2E"
+if(0){
+col.SBtarget    <- format_type() %>% dplyr::filter(name=="target") %>%
+  select(col) %>% unlist()
+col.SBlim       <- format_type() %>% dplyr::filter(name=="limit") %>%
+  select(col) %>% unlist()
+col.SBlim       <- col.SBlimit
+col.SBban       <- format_type() %>% dplyr::filter(name=="ban") %>%
+  select(col) %>% unlist()
 col.Ftarget     <- "#714C99"
 col.betaFtarget <- "#505596"
 pt1             <- 0.3528
+}
 
 #' 会議用の図のフォーマット
 #'
@@ -828,13 +833,6 @@ plot_futures <- function(vpares=NULL,
                          remove.last.vpa.year = FALSE
 ){
 
-  col.SBtarget <- "#00533E"
-  col.SBlim <- "#edb918"
-  col.SBban <- "#C73C2E"
-  col.MSY <- "black"
-  col.Ftarget <- "#714C99"
-  col.betaFtarget <- "#505596"
-
   for(i in 1:length(future.list)){
     if(class(future.list[[i]])=="future_new")
       future.list[[i]] <- format_to_old_future(future.list[[i]])
@@ -906,7 +904,8 @@ plot_futures <- function(vpares=NULL,
     dplyr::filter(stat%in%rename_list$stat) %>%
     mutate(stat=factor(stat,levels=rename_list$stat)) %>%
     left_join(rename_list) %>%
-    mutate(value=value/unit)
+    mutate(value=value/unit)%>%
+    mutate(type="future")
 
   if(is.null(future.replicate)){
     set.seed(seed)
@@ -914,7 +913,8 @@ plot_futures <- function(vpares=NULL,
   }
   future.example <- future_tibble %>%
     dplyr::filter(sim%in%future.replicate) %>%
-    group_by(sim,scenario)
+    group_by(sim,scenario) %>%
+    mutate(type="example")
 
   if(is.null(maxyear)) maxyear <- max(future_tibble$year)
   if(is.null(minyear)) minyear <- min(future_tibble$year)
@@ -927,7 +927,8 @@ plot_futures <- function(vpares=NULL,
              mean=value,sim=0)%>%
       dplyr::filter(stat%in%rename_list$stat) %>%
       left_join(rename_list) %>%
-      mutate(value=value/unit,mean=mean/unit)
+      mutate(value=value/unit,mean=mean/unit) %>%
+      mutate(type="VPA")
 
     if ( isTRUE(remove.last.vpa.year) ) vpa_tb = vpa_tb %>% filter(year<max(year))
 
@@ -935,7 +936,8 @@ plot_futures <- function(vpares=NULL,
     tmp <- vpa_tb %>% group_by(stat) %>%
       summarise(value=tail(value[!is.na(value)],n=1,na.rm=T),
                 year=tail(year[!is.na(value)],n=1,na.rm=T),sim=0)
-    future.dummy <- purrr::map_dfr(future.name,function(x) mutate(tmp,scenario=x))
+    future.dummy <- purrr::map_dfr(future.name,function(x) mutate(tmp,scenario=x))%>%
+    mutate(type="future")
   }
   else{
     future.dummy <- NULL
@@ -947,15 +949,14 @@ plot_futures <- function(vpares=NULL,
   future_tibble <-
     bind_rows(future_tibble,vpa_tb,future.dummy) %>%
     mutate(stat=factor(stat,levels=rename_list$stat)) %>%
-    mutate(scenario=factor(scenario,levels=c(future.name,"VPA"))) #%>%
-  #        mutate(value=ifelse(stat%in%c("beta_gamma","U"),value,value/biomass.unit))
+    mutate(scenario=factor(scenario,levels=c(future.name,"VPA"))) 
 
   future_tibble.qt <-
-    future_tibble %>% group_by(scenario,year,stat) %>%
+    future_tibble %>% group_by(scenario,year,stat,type) %>%
     summarise(low=quantile(value,CI_range[1],na.rm=T),
               high=quantile(value,CI_range[2],na.rm=T),
               median=median(value,na.rm=T),
-              mean=mean(value))
+              mean=mean(value)) 
 
   # make dummy for y range
   dummy <- future_tibble %>% group_by(stat) %>% summarise(max=max(value)) %>%
@@ -974,6 +975,7 @@ plot_futures <- function(vpares=NULL,
   dummy     <- left_join(dummy,rename_list,by="stat") %>% dplyr::filter(!is.na(stat))
   dummy2    <- left_join(dummy2,rename_list,by="stat") %>% dplyr::filter(!is.na(stat))
 
+  # create data for reference points
   dat_RP <- tibble(jstat=NULL, value=NULL, RP_name=NULL)
   if("SSB" %in% what.plot && (!is.na(Btarget) || !is.na(Blimit) || !is.na(Bban))){
     dat_RP <- bind_rows(dat_RP, 
@@ -981,7 +983,7 @@ plot_futures <- function(vpares=NULL,
                                  dplyr::pull(jstat),
                                value = c(Btarget, Blimit, Bban) / biomass.unit,
                                RP_name = RP_name,
-                               name = c("target","limit","ban")))
+                               scenario = c("target","limit","ban")))
   }
   if("catch" %in% what.plot && !is.na(MSY)){
     dat_RP <- bind_rows(dat_RP,
@@ -989,7 +991,7 @@ plot_futures <- function(vpares=NULL,
                                  dplyr::pull(jstat),
                                value=MSY/biomass.unit,
                                RP_name="MSY",
-                               name="target"))
+                               scenario="target"))
   }
   if("U" %in% what.plot && !is.na(Umsy)){
     dat_RP <- bind_rows(dat_RP, 
@@ -997,8 +999,9 @@ plot_futures <- function(vpares=NULL,
                                          dplyr::pull(jstat),
                                        value=Umsy,
                                        RP_name="U_MSY",
-                                       name="target"))
+                                       scenario="target"))
   }
+  dat_RP <- dat_RP %>% mutate(type="RP")
 
   options(warn=org.warn)
 
@@ -1006,80 +1009,56 @@ plot_futures <- function(vpares=NULL,
       warning("average_lwd と example_width が同じ太さです. 図の脚注との整合を確認してください.")
   }
 
-  g1 <- future_tibble.qt %>% dplyr::filter(!is.na(stat)) %>%
-    ggplot()
+  # create all combined data
+  alldata <- bind_rows(future_tibble.qt, future.example) %>%
+    dplyr::filter(!is.na(stat) & year %in% minyear:maxyear) %>%
+    bind_rows(dat_RP) %>% #future_tibble.qt %>% dplyr::filter(!is.na(stat)) %>%
+    group_by(scenario) %>% mutate(scenario=factor(scenario)) 
+
+  g1 <- alldata %>% ggplot()
 
   if(isTRUE(is.plot.CIrange)){
+    # draw prediction interval    
     if (isTRUE(is.plot.CIline)) {
       g1 <- g1+
-        geom_line(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario!="VPA" & year %in% minyear:maxyear),
-                  mapping=aes(x=year,y=high,lty=scenario,color=scenario))+
-        geom_line(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario!="VPA" & year %in% minyear:maxyear),
-                  mapping=aes(x=year,y=low,lty=scenario,color=scenario))
+        geom_line(data=. %>% dplyr::filter(type=="future"),
+                  mapping=aes(x=year,y=high,lty=scenario,color=scenario,group=scenario))+
+        geom_line(data=. %>% dplyr::filter(type=="future"),
+                  mapping=aes(x=year,y=low,lty=scenario,color=scenario, group=scenario))
     }
+    # draw future projection results
     g1 <- g1 +
-      geom_ribbon(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario!="VPA" & year %in% minyear:maxyear),
+      geom_ribbon(data=. %>% dplyr::filter(type=="future"),
                   mapping=aes(x=year,ymin=low,ymax=high,fill=scenario),alpha=0.4)+
-      geom_line(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario!="VPA" & year %in% minyear:maxyear),
+      geom_line(data= . %>% dplyr::filter(type=="future"),
                 mapping=aes(x=year,y=mean,color=scenario),lwd=average_lwd)
   }
-  #    else{
-  #        g1 <- g1+
-  #            geom_line(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario=="VPA"),
-  #                      mapping=aes(x=year,y=mean,color=scenario),lwd=1)#+
-  #    }
 
+  # apply dummy data
   g1 <- g1+
     geom_blank(data=dummy,mapping=aes(y=value,x=year))+
     geom_blank(data=dummy2,mapping=aes(y=value,x=year))+
-    #theme_bw(base_size=font.size) +
-    #        coord_cartesian(expand=0)+
     scale_y_continuous(expand=expand_scale(mult=c(0,0.05)),labels = scales::comma)+
     facet_wrap(~factor(jstat,levels=rename_list$jstat),scales="free_y",ncol=ncol)+
-    xlab("年")+ylab("")+ labs(fill = "",linetype="",color="")+
     xlim(minyear,maxyear)
 
+  # draw reference points
   if(nrow(dat_RP)>0){
-    dat_RP <- dat_RP %>% left_join(format_type()) 
-    browser()
-    g1 <- g1 + geom_hline(data = dat_RP,
-                          aes(yintercept = value, lty=name, color=name))+
-      scale_linetype_identity() +
-      scale_color_identity()  
-  }
-  
-  if(0){
-  if("SSB" %in% what.plot && Btarget*Blimit*Bban>0){
-    g1 <- g1 + geom_hline(data = ssb_RP,
-                          aes(yintercept = value,linetype=RP_name),
-                          color = c(col.SBtarget, col.SBlim, col.SBban))+
-        scale_linetype_manual(name="",values=c("solid","dashed",unlist(format_type()[1,3])[[1]],unlist(format_type()[1,3])[[1]],unlist(format_type()[3,3])[[1]],unlist(format_type()[2,3])[[1]],unlist(format_type()[1,3])[[1]]))
+    g1 <- g1 + geom_hline(data = . %>% dplyr::filter(type=="RP"),
+                          aes(yintercept = value, lty=scenario, color=scenario))
   }
 
-  if("catch" %in% what.plot && MSY!=0 ){
-    g1 <- g1 + geom_hline(data = catch_RP,
-                          aes(yintercept = value, linetype = RP_name),
-                          color = c(col.MSY))
-  }
-
-  if("U" %in% what.plot && Umsy!=0){
-    g1 <- g1 + geom_hline(data = U_RP,
-                          aes(yintercept = value, linetype = RP_name),
-                          color = c(col.MSY))
-  }
-  }
-
+  # draw examples
   if(n_example>0){
-      if(n_example>1){
-        tmpdata <- dplyr::filter(future.example,year <= maxyear)
-        g1 <- g1 + geom_line(data=tmpdata,
+    if(n_example>1){
+      g1 <- g1 + geom_line(data=. %>% dplyr::filter(type=="example"),
                            mapping=aes(x=year,y=value,
-                                       alpha=as.factor(sim),
+                                       alpha=factor(sim),
                                        color=scenario),
                            lwd=example_width)
     }
     else{
-      g1 <- g1 + geom_line(data=dplyr::filter(future.example,year %in% minyear:maxyear),
+      g1 <- g1 + geom_line(data=. %>% dplyr::filter(type=="example"),
                            mapping=aes(x=year,y=value,
                                        color=scenario),
                            lwd=example_width)
@@ -1108,16 +1087,43 @@ plot_futures <- function(vpares=NULL,
                                           TRUE ~ ")"))
   }
 
-  g1 <- g1 + guides(lty=guide_legend(ncol=3),
-                    fill=guide_legend(ncol=3),
-                    col=guide_legend(ncol=3))+
-    theme_SH(base_size=font.size,legend.position=legend.position)+
-    scale_color_hue(l=40)+
-    labs(caption = caption_string)
-
   g1 <- g1 +
-    geom_line(data=dplyr::filter(future_tibble.qt,!is.na(stat) & scenario=="VPA"),
-              mapping=aes(x=year,y=mean),lwd=1,color="black")# VPAのプロット
+    geom_line(data=. %>% dplyr::filter(scenario=="VPA"),
+              mapping=aes(x=year,y=mean, color=scenario),lwd=1, show.legend=FALSE)# VPAのプロット
+
+  # definition of colors an line type
+  ggColorHue <- function(n, l=65) {
+    hues <- seq(15, 375, length=n+1)
+    hcl(h=hues, l=l, c=100)[1:n]
+  }
+
+  # definition of colors and line type
+  all_scenario <- unique(future_tibble.qt$scenario) %>% as.character()
+  if(nrow(dat_RP)>0) all_scenario <- c(all_scenario, unique(dat_RP$scenario))
+  col_type <- tibble(scenario=all_scenario) %>%
+    left_join(rename(format_type(), scenario=name))
+  col_type$col[col_type$scenario=="VPA"] <- "black"
+  col_type$lty[col_type$scenario=="VPA"] <- "solid"
+  tmp <- which(is.na(col_type$col))
+  col_type$col[tmp] <- ggColorHue(n=length(tmp))
+  col_type$lty[tmp] <- "solid"
+  col_vector <- col_type$col %>% as.character()
+  lty_vector <- col_type$lty %>% as.character()
+  names(lty_vector) <- names(col_vector) <- col_type$scenario
+  col_type <- col_type %>% left_join(dat_RP) %>%
+    mutate(RP_name = ifelse(is.na(RP_name), scenario, RP_name))
+
+  # setting scales and guides
+  g1 <- g1 + guides(lty=guide_legend(ncol=2),
+                    fill=guide_legend(ncol=2),
+                    col=guide_legend(ncol=2))+
+    theme_SH(base_size=font.size,legend.position=legend.position)+
+    theme(legend.key.width=unit(1,"cm")) +    
+    scale_color_hue(l=40)+
+    scale_color_manual   (values=col_vector)+#, label=col_type$RP_name) +
+    scale_fill_manual    (values=col_vector)+#, label=col_type$RP_name) +      
+    scale_linetype_manual(values=lty_vector)+#, label=col_type$RP_name) +  
+    xlab("年")+ylab("") + labs(fill = "",linetype="",color="")    
   return(g1)
 }
 
