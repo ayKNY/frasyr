@@ -829,7 +829,7 @@ plot_futures <- function(vpares=NULL,
                          legend.position="top",
                          type="detail",
                          font.size=16,
-                         ncol=3,
+                         ncol=3,ncol_legend=2,
                          remove.last.vpa.year = FALSE
 ){
 
@@ -976,13 +976,13 @@ plot_futures <- function(vpares=NULL,
   dummy2    <- left_join(dummy2,rename_list,by="stat") %>% dplyr::filter(!is.na(stat))
 
   # create data for reference points
-  dat_RP <- tibble(jstat=NULL, value=NULL, RP_name=NULL)
+  dat_RP <- tibble(jstat=NULL, value=NULL, name=NULL)
   if("SSB" %in% what.plot && (!is.na(Btarget) || !is.na(Blimit) || !is.na(Bban))){
     dat_RP <- bind_rows(dat_RP, 
                         tibble(jstat = dplyr::filter(rename_list, stat == "SSB") %>%
                                  dplyr::pull(jstat),
                                value = c(Btarget, Blimit, Bban) / biomass.unit,
-                               RP_type = c("target","limit","ban"),
+                               name = c("target","limit","ban"),
                                scenario = RP_name))
   }
   if("catch" %in% what.plot && !is.na(MSY)){
@@ -990,7 +990,7 @@ plot_futures <- function(vpares=NULL,
                         tibble(jstat=dplyr::filter(rename_list, stat == "catch") %>%
                                  dplyr::pull(jstat),
                                value=MSY/biomass.unit,
-                               RP_name="MSY",
+                               name="MSY",
                                scenario="MSY"))
   }
   if("U" %in% what.plot && !is.na(Umsy)){
@@ -998,7 +998,7 @@ plot_futures <- function(vpares=NULL,
                         U_RP <- tibble(jstat=dplyr::filter(rename_list, stat == "U") %>%
                                          dplyr::pull(jstat),
                                        value=Umsy,
-                                       RP_name="U_MSY",
+                                       name="U_MSY",
                                        scenario="U_MSY"))
   }
   dat_RP <- dat_RP %>% mutate(type="RP")
@@ -1015,35 +1015,27 @@ plot_futures <- function(vpares=NULL,
     bind_rows(dat_RP) %>% #future_tibble.qt %>% dplyr::filter(!is.na(stat)) %>%
     group_by(scenario) %>% mutate(scenario=factor(scenario))
 
-  # define style
   # definition of colors an line type
   ggColorHue <- function(n, l=65) {
     hues <- seq(15, 375, length=n+1)
     hcl(h=hues, l=l, c=100)[1:n]
   }
 
-  # definition of colors and line type
   all_scenario <- unique(alldata$scenario)
-  col_type <- tibble(scenario=all_scenario) %>%
+  style_def <- tibble(scenario=all_scenario) %>%
     left_join(dat_RP) %>%
-    left_join(rename(format_type(), RP_type=name))
-  col_type$col[col_type$scenario=="VPA"] <- "black"
-  col_type$lty[col_type$scenario=="VPA"] <- "solid"  
-  col_type$col[col_type$scenario=="MSY"] <- "#000001" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
-  col_type$col[col_type$scenario=="U_MSY"] <- "#000002" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
-  col_type$lty[col_type$scenario=="MSY"] <- "dashed" # blackとは微妙に違った色にする
-  col_type$lty[col_type$scenario=="U_MSY"] <- "dashed" # blackとは微妙に違った色にする  
-  tmp <- which(is.na(col_type$col))
-  col_type$col[tmp] <- ggColorHue(n=length(tmp))
-  col_type$lty[tmp] <- "solid"
-  col_vector <- col_type$col %>% as.character()
-#  lty_vector <- col_type$lty %>% as.character()
-#  names(lty_vector) <- names(col_vector) <- col_type$scenario
-#  col_type <- col_type %>% left_join(dat_RP) %>%
-#    mutate(RP_name = ifelse(is.na(RP_name), scenario, RP_name))
-#  browser()
+    left_join(format_type())
+  style_def$col[style_def$scenario=="VPA"] <- "black"
+  style_def$lty[style_def$scenario=="VPA"] <- "solid"  
+  style_def$col[style_def$scenario=="MSY"] <- "#000001" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
+  style_def$col[style_def$scenario=="U_MSY"] <- "#000002" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
+  style_def$lty[style_def$scenario=="MSY"] <- "dashed" # blackとは微妙に違った色にする
+  style_def$lty[style_def$scenario=="U_MSY"] <- "dashed" # blackとは微妙に違った色にする  
+  tmp <- which(is.na(style_def$col))
+  style_def$col[tmp] <- ggColorHue(n=length(tmp))
+  style_def$lty[tmp] <- "solid"
   
-  alldata <- alldata %>% left_join(col_type %>% select(scenario, col, lty))
+  alldata <- alldata %>% left_join(style_def %>% select(scenario, col, lty))
 
   g1 <- alldata %>% ggplot() # aes(color=scenario, lty=scenario) とここで一括して指定すればよさげに思えるがそうするとうまくいかない
 
@@ -1122,19 +1114,15 @@ plot_futures <- function(vpares=NULL,
               mapping=aes(x=year, y=mean, color=col, lty=lty),lwd=1) # VPAのプロット
 
   # setting scales and guides
-  g1 <- g1 + guides(lty=guide_legend(ncol=2),
-                     fill=guide_legend(ncol=1),
-                     col=guide_legend(ncol=2))+
-     theme_SH(base_size=font.size,legend.position=legend.position)+
-     theme(legend.key.width=unit(1.2,"cm")) +    
-  ##   scale_color_manual(values=col_vector, label=col_type$RP_name) +
-  ##   scale_fill_manual    (values=col_vector)+#, label=col_type$RP_name) +      
-  ##   scale_linetype_manual(values=lty_vector)+#, label=col_type$RP_name) +
-    scale_color_identity(guide="legend", labels=col_type$scenario, breaks=col_type$col) +
-    scale_linetype_identity(guide="legend") +
-    scale_fill_identity(guide="legend", labels=col_type$scenario, breaks=col_type$col)+
-    guides(color=guide_legend(ncol=2, override.aes=list(linetype=col_type$lty, color=col_type$col, lwd=0.7)),
-           lty="none") +
+  g1 <- g1 + 
+    theme_SH(base_size=font.size,legend.position=legend.position)+
+    theme(legend.key.width=unit(1.2,"cm")) +    
+    scale_color_identity(guide="legend", labels=style_def$scenario, breaks=style_def$col) +
+    scale_linetype_identity() +
+    scale_fill_identity(guide="legend", labels=style_def$scenario, breaks=style_def$col)+
+    guides(color=guide_legend(ncol=ncol_legend,
+                              override.aes=list(linetype=style_def$lty, color=style_def$col, lwd=0.7)),
+           lty="none", fill=guide_legend(ncol=1)) +
   xlab("年")+ylab("") + labs(fill = "",linetype="",color="")
   
   return(g1)
