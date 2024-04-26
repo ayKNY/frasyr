@@ -13,7 +13,8 @@ plot_vpa(
   legend.position = "top",
   vpaname = NULL,
   ncol = 2,
-  scale_value = NULL
+  scale_value = NULL,
+  is_minor_ticks = TRUE
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ plot_vpa(
 \item{vpaname}{凡例につけるVPAのケースの名前。vpalistと同じ長さにしないとエラーとなる}
 
 \item{ncol}{図の列数}
+
+\item{is_minor_ticks}{補助目盛りをつける場合はTRUE。デフォルトはTRUE}
 }
 \description{
 複数のVPAの結果を重ね書きする

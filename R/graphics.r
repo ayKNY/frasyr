@@ -1022,9 +1022,14 @@ plot_futures <- function(vpares=NULL,
   }
 
   all_scenario <- unique(alldata$scenario)
-  style_def <- tibble(scenario=all_scenario) %>%
-    left_join(dat_RP) %>%
-    left_join(format_type())
+  if(nrow(dat_RP)>0){
+    style_def <- tibble(scenario=all_scenario) %>%
+      left_join(dat_RP) %>%
+      left_join(format_type())
+  }
+  else{
+    style_def <- tibble(scenario=all_scenario, col=NA, lty=NA)    
+  }
   style_def$col[style_def$scenario=="VPA"] <- "black"
   style_def$lty[style_def$scenario=="VPA"] <- "solid"  
   style_def$col[style_def$scenario=="MSY"] <- "#000001" # 異なるカテゴリと認識させるため、blackとは微妙に違った色にする
