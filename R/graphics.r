@@ -22,17 +22,6 @@ pt1             <- 0.3528
 
 theme_SH <- function(legend.position="none",base_size=12){
 
-  ## if(isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
-  ##   font_MAC <- "HiraginoSans-W3"
-  ##   theme_bw(base_size=base_size) +
-  ##     theme(panel.grid = element_blank(),
-  ##           axis.text.x=element_text(size=11,color="black"),
-  ##           axis.text.y=element_text(size=11,color="black"),
-  ##           axis.line.x=element_line(size= 0.3528),
-  ##           axis.line.y=element_line(size= 0.3528),
-  ##           legend.position=legend.position, text =element_text(family = font_MAC) )
-  ## }
-  ## else{
     theme_bw(base_size=base_size) +
       theme(panel.grid = element_blank(),
             axis.text.x=element_text(size=11,color="black"),
@@ -356,7 +345,6 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
                     labeling.year=NULL,add.info=TRUE, recruit_intercept=0,
                     plot_CI=FALSE, CI=0.9, shape_custom=c(21,3),box.padding=0,
                     add_graph=NULL){
-  font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
 
   if(is.null(refs$Blimit) && !is.null(refs$Blim)) refs$Blimit <- refs$Blim
 
@@ -407,7 +395,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     mutate(R=R/yscale,SSB=SSB/xscale)
   ymax <- max(alldata$R)
   year.max <- max(alldata$year,na.rm=T)
-  tmp <- 1950:2030
+  tmp <- 0:3000
   if(is.null(labeling.year)) labeling.year <- c(tmp[tmp%%5==0],year.max)
     alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
 
@@ -466,15 +454,11 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     }
   }
 
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
   g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
                        aes(y=R,x=SSB),color="black") +
     geom_point(data=dplyr::filter(alldata,type=="obs"),
                aes(y=R,x=SSB,shape=weight),fill="white") +
     scale_shape_manual(values = shape_custom) +
-      #    ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-      #                             segment.alpha=0.5,nudge_y=5,
-      #                             aes(y=R,x=SSB,label=pick.year)) +
     ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
                              box.padding=box.padding,segment.color="gray",nudge_y=5,
                              aes(y=R,x=SSB,label=pick.year)) +
@@ -484,26 +468,6 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     xlab(str_c("親魚量 (",xlabel,")"))+
     ylab(str_c("加入量 (",ylabel,")"))+
     coord_cartesian(ylim=c(0,ymax*1.05),expand=0)
-    }else{
-      g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
-                           aes(y=R,x=SSB),color="black") +
-        geom_point(data=dplyr::filter(alldata,type=="obs"),
-                   aes(y=R,x=SSB,shape=weight),fill="white") +
-        scale_shape_manual(values = shape_custom) +
-        #    ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-        #                             segment.alpha=0.5,nudge_y=5,
-        #                             aes(y=R,x=SSB,label=pick.year)) +
-      ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-                               box.padding=box.padding,segment.color="gray",nudge_y=5,
-                               aes(y=R,x=SSB,label=pick.year)) +
-        theme_bw(base_size=14)+
-        theme(legend.position = 'none') +
-        theme(panel.grid = element_blank()) +
-        theme(text = element_text(family = font_MAC)) +
-        xlab(str_c("親魚量 (",xlabel,")"))+
-        ylab(str_c("加入量 (",ylabel,")"))+
-        coord_cartesian(ylim=c(0,ymax*1.05),expand=0)
-    }
 
   if(is_release_data){
     g1 <- g1 + geom_point(data=dplyr::filter(alldata,type=="release"),
@@ -534,11 +498,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     if(sum(SRdata$weight=="0")>0) cap1 <- str_c(cap1, "\n パラメータ推定に利用（丸）,利用していない（バツ） ")
     if(is_release_data) cap1 <- str_c(cap1, "\n 灰色：放流＋天然、黒：天然のみ")
 
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
-      g1 <- g1+labs(caption=cap1)
-    }else{
-      g1 <- g1+labs(caption=cap1,family = font_MAC)
-    }
+    g1 <- g1+labs(caption=cap1)
   }
 
   if(!is.null(refs)){
@@ -579,8 +539,6 @@ SRplot_gg <- plot.SR <- function(...){
 
 compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=TRUE, output_folder=""){
 
-  font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
-
   if(newplot){
     if(!is.null(SRlist[[1]]$input)){
       SRdata <- purrr::map_dfr(SRlist[], function(x){
@@ -602,20 +560,12 @@ compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=T
         SRpred <- purrr::map_dfr(SRlist,
                              function(x) x$pred, .id="SR_type")
         #SRpred$再生産関係 <- as.factor(SRpred$再生産関係)
-    font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
-
     g1 <- ggplot(data=SRpred)
     g1 <- g1 + geom_line(data=SRpred,
                          mapping=aes(x=SSB/biomass.unit,y=R/number.unit, linetype=SR_type, col=SR_type))
     g1 <- g1 + geom_point(data=SRdata, mapping=aes(x=SSB/biomass.unit, y=R/number.unit), color="black")
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
     g1 <- g1 + xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
       labs(x = "親魚量（千トン）", y = "加入尾数（百万尾)") + theme_SH(legend.position="top")
-    }else{
-      g1 <- g1 + xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
-        labs(x = "親魚量（千トン）", y = "加入尾数（百万尾)") + theme_SH(legend.position="top")+theme(text = element_text(family = font_MAC))
-    }
-    #g1
     ggsave_SH(g1, file=paste("./",output_folder,"/resSRcomp.png",sep=""))
     g1
   }
