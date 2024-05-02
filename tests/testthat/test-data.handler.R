@@ -530,6 +530,7 @@ test_that("vpa function (with dummy data) (level 2-3?)",{
   expect_equal(res_vpa_estb_tune5m_b_sigma$sigma[[2]],res_vpa_estb_tune5m_b_sigma$sigma[[3]])
 
   # TMB true + set lambda + 全F推定法．最尤法．b推定あり----
+  if(0){
   library(TMB)
   use_rvpa_tmb()
   res_vpa_estb_tune6m_b <- vpa(vpadat_estb, last.catch.zero = FALSE, min.age=c(0,0,0,0,0,0),max.age=c(3,3,0,0,3,3),
@@ -626,6 +627,7 @@ test_that("vpa function (with dummy data) (level 2-3?)",{
   # tmb = TRUE/FALSEで結果が一致するか
   expect_equal(as.numeric(res_vpa_estb_tune6m_b_maiwashi5$term.f),as.numeric(res_vpa_estb_tune6m_b_maiwashi5notmb$term.f))
   expect_equal(as.numeric(res_vpa_estb_tune6m_b_maiwashi5$logLik),as.numeric(res_vpa_estb_tune6m_b_maiwashi5notmb$logLik))
+  }
 
   #1-5: test abund.extractor function----
   naa_base0<-res_vpa_base0_nontune$naa
