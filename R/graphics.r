@@ -316,10 +316,7 @@ plot_SRdata <- function(SRdata, type=c("classic","gg")[1]){
 #'
 #' @param SR_result fit.SRの結果のオブジェクト
 #' @param refs 管理基準値 (list(Blimit=0, Bmsy=10, Bban=0))
-#' @param
-#' @param
-#' @param
-#' @param
+#' @param last_year_color 最終年何年かのプロットの色を「赤」に変更する。０だと変更しない、正の整数を与えるとその数分だけプロットの色が変わる
 #'
 #' @encoding UTF-8
 #'
@@ -344,7 +341,7 @@ plot_SRdata <- function(SRdata, type=c("classic","gg")[1]){
 plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,ylabel="尾",
                     labeling.year=NULL,add.info=TRUE, recruit_intercept=0,
                     plot_CI=FALSE, CI=0.9, shape_custom=c(21,3),box.padding=0,
-                    add_graph=NULL){
+                    add_graph=NULL, last_year_color=0){
 
   if(is.null(refs$Blimit) && !is.null(refs$Blim)) refs$Blimit <- refs$Blim
 
@@ -397,7 +394,14 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   year.max <- max(alldata$year,na.rm=T)
   tmp <- 0:3000
   if(is.null(labeling.year)) labeling.year <- c(tmp[tmp%%5==0],year.max)
-    alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
+  alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
+  if(last_year_color > 0){
+    last_years <- rev(sort(unique(SRdata$year)))[1:last_year_color]
+    alldata <- alldata %>% mutate(last_years_fill =ifelse(year%in%last_years,"red","white"))
+  }
+  else{
+    alldata <- alldata %>% mutate(last_years_fill="white")
+  }
 
   use_gamma <- SR_result$input$SR %in% c("Mesnil", "Shepherd", "BHS")
 
@@ -455,9 +459,9 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   }
 
   g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
-                       aes(y=R,x=SSB),color="black") +
+                       aes(y=R,x=SSB),color=gray(0.6)) +
     geom_point(data=dplyr::filter(alldata,type=="obs"),
-               aes(y=R,x=SSB,shape=weight),fill="white") +
+               aes(y=R,x=SSB,shape=weight, fill=last_years_fill),color="black") +
     scale_shape_manual(values = shape_custom) +
     ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
                              box.padding=box.padding,segment.color="gray",nudge_y=5,
@@ -467,7 +471,8 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     theme(panel.grid = element_blank()) +
     xlab(str_c("親魚量 (",xlabel,")"))+
     ylab(str_c("加入量 (",ylabel,")"))+
-    coord_cartesian(ylim=c(0,ymax*1.05),expand=0)
+    coord_cartesian(ylim=c(0,ymax*1.05),expand=0)+
+    scale_color_identity() + scale_fill_identity()
 
   if(is_release_data){
     g1 <- g1 + geom_point(data=dplyr::filter(alldata,type=="release"),
