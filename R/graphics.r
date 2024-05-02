@@ -405,57 +405,33 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
 
   use_gamma <- SR_result$input$SR %in% c("Mesnil", "Shepherd", "BHS")
 
-  if(!use_gamma){
-    g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
-      stat_function(fun=SRF,args=list(a=SR_result$pars$a,
-                                      b=SR_result$pars$b),color="deepskyblue3",lwd=1.3,
-                    n=5000)
-  }else{
-    g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
-      stat_function(fun=SRF,args=list(a=SR_result$pars$a,
-                                      b=SR_result$pars$b,
-                                      gamma=SR_result$input$gamma),color="deepskyblue3",lwd=1.3,
-                    n=5000)
-  }
+  args_list <- list(a=SR_result$pars$a, b=SR_result$pars$b)
+  if(use_gamma==TRUE) args_list <- args_list %>% list_modify(gamma=SR_result$input$gamma)
+
+  g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
+    stat_function(fun=SRF,args=args_list,color="deepskyblue3",lwd=1.3,n=5000)
 
   if(!is.null(add_graph)) g1 <- g1+add_graph
 
   if(isTRUE(plot_CI)){
-    if(!use_gamma){
-      g1 <- g1+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                sigma=SR_result$pars$sd,
-                                sign=-1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                sigma=SR_result$pars$sd,
-                                sign=1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)
-    }else{
-      g1 <- g1+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                gamma=SR_result$input$gamma,
-                                sigma=SR_result$pars$sd,
-                                sign=-1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                gamma=SR_result$input$gamma,
-                                sigma=SR_result$pars$sd,
-                                sign=1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)
-    }
+    args_list <- args_list %>% list_modify(sigma=SR_result$pars$sd, CI=CI)
+    g1 <- g1+
+      stat_function(fun=SRF_CI,
+                    args=list_modify(args_list, sign=-1),
+#                      args=list(a=SR_result$pars$a,
+#                                b=SR_result$pars$b,
+#                                sigma=SR_result$pars$sd,
+#                                sign=-1,
+#                                CI=CI),
+                    color="deepskyblue3",lty=3,n=5000)+
+      stat_function(fun=SRF_CI,
+                args=list_modify(args_list, sign=1),                
+#                      args=list(a=SR_result$pars$a,
+#                                b=SR_result$pars$b,
+#                                sigma=SR_result$pars$sd,
+#                                sign=1,
+#                                CI=CI),
+                color="deepskyblue3",lty=3,n=5000)
   }
 
   g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
