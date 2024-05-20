@@ -31,10 +31,11 @@
 #' @param HCR_beta_year betaを年によって変える場合。tibble(year=2020:2024, beta=c(1.3,1.2,1.1,1,0.9))　のようにtibble形式で与える。HCR_betaで設定されたbetaは上書きされる。
 #' @param HCR_Blimit_year Blimitを年によって変える場合。tibble(year=2020:2024, Blimit=c(1.3,1.2,1.1,1,0.9))　のようにtibble形式で与える。HCR_Blimitで設定されたBlimitは上書きされる。
 #' @param HCR_Bban_year Bbanを年によって変える場合。tibble(year=2020:2024, Bban=c(1.3,1.2,1.1,1,0.9))　のようにtibble形式で与える。HCR_Bbanで設定されたBbanは上書きされる。
-#' @param HCR_TAC_reserve_rate TACの取り残し率
-#' @param HCR_TAC_carry_rate TACの何％まで持ち越せるか
-#' @param HCR_TAC_reserve_amount その年の総漁獲可能量に対する獲り残し量
-#' @param HCR_TAC_carry_amount 当初TACのうち何トンまで持ち越せるか
+#' @param HCR_TAC_reserve_rate TACの取り残し率。マイナス値を入れれば前借りもできる。
+#' @param HCR_TAC_reserve_amount TACの獲り残し量。マイナス値を入れれば前借りもできる。rateとamountの片方どちらかだけ設定する
+#' @param HCR_reserve_denom 比率で取り残し量を決める場合、もともとのABCをもとにするか（"original_ABC"、ブリ・マダラ繰越前借り設定）前年からの繰越も考慮したABCをもとにするか（"original_ABC_plus", スケトウ繰越設定）
+#' @param HCR_TAC_carry_rate 当初TACのうち何トンまで持ち越せるかの上限（比率）。マイナス値を入れれば前借りもできる。
+#' @param HCR_TAC_carry_amount 当初TACのうち何トンまで持ち越せるかの上限（比率）。マイナス値を入れれば前借りもできる。
 #' @param HCR_TAC_upper_CV 漁獲量が前年の漁獲量のHCR_TAC_upper_CV倍と比較し、それよりも変化が大きい場合には前年の漁獲量xHCR_TAC_upper_CVを上限とする。単一の値か、tibble形式 tibble(year=2020:2024, TAC_upper_CV=rep(0.1,5)) で与える
 #' @param HCR_TAC_lower_CV 漁獲量が前年の漁獲量のHCR_TAC_lower_CV倍と比較し、それよりも変化が大きい場合には前年の漁獲量xHCR_TAC_lower_CVを下限とする。単一の値か、tibble形式 tibble(year=2020:2024, TAC_lower_CV=rep(0.1,5)) で与える
 #' @param Pope 漁獲方程式にPopeの近似式を使うかどうか。与えない場合には、VPAのオプションが引き継がれる
@@ -107,6 +108,7 @@ make_future_data <- function(res_vpa,
                              HCR_TAC_upper_CV=NA,
                              HCR_TAC_lower_CV=NA,
                              HCR_function_name="HCR_default",
+                             HCR_reserve_denom="original_ABC_plus",
                              # Other
                              Pope=res_vpa$input$Pope,
                              fix_recruit=NULL, # list(year=2020, rec=1000)
@@ -136,18 +138,18 @@ make_future_data <- function(res_vpa,
   input <- lapply(argname,function(x) eval(parse(text=x)))
   names(input) <- argname
 
-  if(!is.na(HCR_TAC_reserve_rate  )) assertthat::assert_that(min(HCR_TAC_reserve_rate  ) >= 0)
-  if(!is.na(HCR_TAC_carry_rate    )) assertthat::assert_that(min(HCR_TAC_carry_rate    ) >= 0)
-  if(!is.na(HCR_TAC_reserve_amount)) assertthat::assert_that(min(HCR_TAC_reserve_amount) >= 0)
-  if(!is.na(HCR_TAC_carry_amount  )) assertthat::assert_that(min(HCR_TAC_carry_amount  ) >= 0)
+#  if(!is.na(HCR_TAC_reserve_rate  )) assertthat::assert_that(min(HCR_TAC_reserve_rate  ) >= 0)
+#  if(!is.na(HCR_TAC_carry_rate    )) assertthat::assert_that(min(HCR_TAC_carry_rate    ) >= 0)
+#  if(!is.na(HCR_TAC_reserve_amount)) assertthat::assert_that(min(HCR_TAC_reserve_amount) >= 0)
+#  if(!is.na(HCR_TAC_carry_amount  )) assertthat::assert_that(min(HCR_TAC_carry_amount  ) >= 0)
 
   assertthat::assert_that(is.logical(waa_fun),
                           is.logical(waa_catch_fun),
                           is.logical(maa_fun),
                           is.logical(bias_correction))
 
-  if(!is.na(HCR_TAC_reserve_rate) && !is.na(HCR_TAC_reserve_amount)) stop("HCR_TAC_reserve_rateとHCR_TAC_reserve_amountが同時に指定されています（同時には指定できません）")
-  if(!is.na(HCR_TAC_carry_rate) && !is.na(HCR_TAC_carry_amount))     stop("HCR_TAC_carry_rateとHCR_TAC_carry_amountが同時に指定されています（同時には指定できません）")
+  if(is.numeric(HCR_TAC_reserve_rate) && is.numeric(HCR_TAC_reserve_amount)) stop("HCR_TAC_reserve_rateとHCR_TAC_reserve_amountが同時に指定されています（同時には指定できません）")
+  if(is.numeric(HCR_TAC_carry_rate) && is.numeric(HCR_TAC_carry_amount))     stop("HCR_TAC_carry_rateとHCR_TAC_carry_amountが同時に指定されています（同時には指定できません）")
 
   # define age and year
   nage <- nrow(res_vpa$naa)
@@ -348,7 +350,8 @@ make_future_data <- function(res_vpa,
                    obj_stat = 0, # 0: mean, 1:geomean
                    objective = 0, # 0: MSY, 1: PGY, 2: percentB0 or Bempirical
                    obj_value = -1,
-                   HCR_function_name=HCR_function_name
+                   HCR_function_name=HCR_function_name,
+                   HCR_reserve_denom=HCR_reserve_denom
   )
 
   if(isTRUE(waa_fun)){
@@ -658,6 +661,7 @@ future_vpa_R <- function(naa_mat,
                          what_return="obj",
                          HCR_mat,
                          HCR_function_name,
+                         HCR_reserve_denom,
                          max_F=exp(10),
                          max_exploitation_rate=0.99,
                          do_MSE=NULL,
@@ -908,23 +912,27 @@ future_vpa_R <- function(naa_mat,
         HCR_realized[t,,"original_ABC"] <- HCR_mat[t,,"expect_wcatch"]
       }
       HCR_realized[t,,"original_ABC_plus"] <- HCR_realized[t,,"original_ABC"] + HCR_realized[t,,"reserved_catch"]
+      # 比率で繰越量を決める場合
       if(all(!is.na(HCR_mat[t,,"TAC_reserve_rate"]))){
-        HCR_mat[t,,"expect_wcatch"] <- HCR_realized[t,,"original_ABC_plus"] * (1-HCR_mat[t,,"TAC_reserve_rate"])
-      } #
+        HCR_mat[t,,"expect_wcatch"] <- HCR_realized[t,,HCR_reserve_denom] * (1-HCR_mat[t,,"TAC_reserve_rate"])
+      }
+      # 漁獲量で繰越量を決める場合
       if(all(!is.na(HCR_mat[t,,"TAC_reserve_amount"]))){
         tmpcatch <- HCR_realized[t,,"original_ABC_plus"] - HCR_mat[t,,"TAC_reserve_amount"]
         HCR_mat[t,,"expect_wcatch"] <- ifelse(tmpcatch<0, 0.01, tmpcatch)
       } #expect_wcatchをゼロにすると不具合がありそうなので、微小値（0.01）を与える
-
+      # 次の年の持ち越し分を計算
       if(t<total_nyear){
         if(all(!is.na(HCR_mat[t,,"TAC_carry_rate"]))){
+          # 翌年に持ち越せる上限量を計算
           max_carry_amount <- HCR_mat[t,,"TAC_carry_rate"]*HCR_realized[t,,"original_ABC"]
         } #
         if(all(!is.na(HCR_mat[t,,"TAC_carry_amount"]))){
           max_carry_amount <- HCR_mat[t,,"TAC_carry_amount"]
-        }                             #
+        }
+        # 実際の漁獲量ともともとのABCの差
         ABC_reserve_amount <- HCR_realized[t,,"original_ABC"] - HCR_mat[t,,"expect_wcatch"]
-        ABC_reserve_amount[ABC_reserve_amount<0] <- 0
+        #ABC_reserve_amount[ABC_reserve_amount<0] <- 0
         HCR_realized[t+1,,"reserved_catch"] <- cbind(max_carry_amount, ABC_reserve_amount) %>%
           apply(1,min)
       }
