@@ -22,17 +22,6 @@ pt1             <- 0.3528
 
 theme_SH <- function(legend.position="none",base_size=12){
 
-  ## if(isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
-  ##   font_MAC <- "HiraginoSans-W3"
-  ##   theme_bw(base_size=base_size) +
-  ##     theme(panel.grid = element_blank(),
-  ##           axis.text.x=element_text(size=11,color="black"),
-  ##           axis.text.y=element_text(size=11,color="black"),
-  ##           axis.line.x=element_line(size= 0.3528),
-  ##           axis.line.y=element_line(size= 0.3528),
-  ##           legend.position=legend.position, text =element_text(family = font_MAC) )
-  ## }
-  ## else{
     theme_bw(base_size=base_size) +
       theme(panel.grid = element_blank(),
             axis.text.x=element_text(size=11,color="black"),
@@ -327,10 +316,7 @@ plot_SRdata <- function(SRdata, type=c("classic","gg")[1]){
 #'
 #' @param SR_result fit.SRの結果のオブジェクト
 #' @param refs 管理基準値 (list(Blimit=0, Bmsy=10, Bban=0))
-#' @param
-#' @param
-#' @param
-#' @param
+#' @param last_year_color 最終年何年かのプロットの色を「赤」に変更する。０だと変更しない、正の整数を与えるとその数分だけプロットの色が変わる
 #'
 #' @encoding UTF-8
 #'
@@ -355,8 +341,7 @@ plot_SRdata <- function(SRdata, type=c("classic","gg")[1]){
 plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,ylabel="尾",
                     labeling.year=NULL,add.info=TRUE, recruit_intercept=0,
                     plot_CI=FALSE, CI=0.9, shape_custom=c(21,3),box.padding=0,
-                    add_graph=NULL){
-  font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
+                    add_graph=NULL, last_year_color=0){
 
   if(is.null(refs$Blimit) && !is.null(refs$Blim)) refs$Blimit <- refs$Blim
 
@@ -407,74 +392,53 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     mutate(R=R/yscale,SSB=SSB/xscale)
   ymax <- max(alldata$R)
   year.max <- max(alldata$year,na.rm=T)
-  tmp <- 1950:2030
+  tmp <- 0:3000
   if(is.null(labeling.year)) labeling.year <- c(tmp[tmp%%5==0],year.max)
-    alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
+  alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
+  if(last_year_color > 0){
+    last_years <- rev(sort(unique(oSRdata$year)))[1:last_year_color]
+    alldata <- alldata %>% mutate(last_years_fill =ifelse(year%in%last_years,"red","white"))
+  }
+  else{
+    alldata <- alldata %>% mutate(last_years_fill="white")
+  }
 
   use_gamma <- SR_result$input$SR %in% c("Mesnil", "Shepherd", "BHS")
 
-  if(!use_gamma){
-    g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
-      stat_function(fun=SRF,args=list(a=SR_result$pars$a,
-                                      b=SR_result$pars$b),color="deepskyblue3",lwd=1.3,
-                    n=5000)
-  }else{
-    g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
-      stat_function(fun=SRF,args=list(a=SR_result$pars$a,
-                                      b=SR_result$pars$b,
-                                      gamma=SR_result$input$gamma),color="deepskyblue3",lwd=1.3,
-                    n=5000)
-  }
+  args_list <- list(a=SR_result$pars$a, b=SR_result$pars$b)
+  if(use_gamma==TRUE) args_list <- args_list %>% list_modify(gamma=SR_result$input$gamma)
+
+  g1 <- ggplot(data=alldata,mapping=aes(x=SSB,y=R)) +
+    stat_function(fun=SRF,args=args_list,color="deepskyblue3",lwd=1.3,n=5000)
 
   if(!is.null(add_graph)) g1 <- g1+add_graph
 
   if(isTRUE(plot_CI)){
-    if(!use_gamma){
-      g1 <- g1+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                sigma=SR_result$pars$sd,
-                                sign=-1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                sigma=SR_result$pars$sd,
-                                sign=1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)
-    }else{
-      g1 <- g1+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                gamma=SR_result$input$gamma,
-                                sigma=SR_result$pars$sd,
-                                sign=-1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)+
-        stat_function(fun=SRF_CI,
-                      args=list(a=SR_result$pars$a,
-                                b=SR_result$pars$b,
-                                gamma=SR_result$input$gamma,
-                                sigma=SR_result$pars$sd,
-                                sign=1,
-                                CI=CI),
-                      color="deepskyblue3",lty=3,n=5000)
-    }
+    args_list <- args_list %>% list_modify(sigma=SR_result$pars$sd, CI=CI)
+    g1 <- g1+
+      stat_function(fun=SRF_CI,
+                    args=list_modify(args_list, sign=-1),
+#                      args=list(a=SR_result$pars$a,
+#                                b=SR_result$pars$b,
+#                                sigma=SR_result$pars$sd,
+#                                sign=-1,
+#                                CI=CI),
+                    color="deepskyblue3",lty=3,n=5000)+
+      stat_function(fun=SRF_CI,
+                args=list_modify(args_list, sign=1),                
+#                      args=list(a=SR_result$pars$a,
+#                                b=SR_result$pars$b,
+#                                sigma=SR_result$pars$sd,
+#                                sign=1,
+#                                CI=CI),
+                color="deepskyblue3",lty=3,n=5000)
   }
 
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
-  g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
-                       aes(y=R,x=SSB),color="black") +
+  g1 <- g1+geom_path(data=dplyr::filter(alldata,type=="obs"),
+                       aes(y=R,x=SSB),color=gray(0.6)) +
     geom_point(data=dplyr::filter(alldata,type=="obs"),
-               aes(y=R,x=SSB,shape=weight),fill="white") +
+               aes(y=R,x=SSB,shape=weight, fill=last_years_fill),color="black") +
     scale_shape_manual(values = shape_custom) +
-      #    ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-      #                             segment.alpha=0.5,nudge_y=5,
-      #                             aes(y=R,x=SSB,label=pick.year)) +
     ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
                              box.padding=box.padding,segment.color="gray",nudge_y=5,
                              aes(y=R,x=SSB,label=pick.year)) +
@@ -483,27 +447,8 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     theme(panel.grid = element_blank()) +
     xlab(str_c("親魚量 (",xlabel,")"))+
     ylab(str_c("加入量 (",ylabel,")"))+
-    coord_cartesian(ylim=c(0,ymax*1.05),expand=0)
-    }else{
-      g1 <- g1+  geom_path(data=dplyr::filter(alldata,type=="obs"),
-                           aes(y=R,x=SSB),color="black") +
-        geom_point(data=dplyr::filter(alldata,type=="obs"),
-                   aes(y=R,x=SSB,shape=weight),fill="white") +
-        scale_shape_manual(values = shape_custom) +
-        #    ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-        #                             segment.alpha=0.5,nudge_y=5,
-        #                             aes(y=R,x=SSB,label=pick.year)) +
-      ggrepel::geom_text_repel(data=dplyr::filter(alldata,type=="obs"),
-                               box.padding=box.padding,segment.color="gray",nudge_y=5,
-                               aes(y=R,x=SSB,label=pick.year)) +
-        theme_bw(base_size=14)+
-        theme(legend.position = 'none') +
-        theme(panel.grid = element_blank()) +
-        theme(text = element_text(family = font_MAC)) +
-        xlab(str_c("親魚量 (",xlabel,")"))+
-        ylab(str_c("加入量 (",ylabel,")"))+
-        coord_cartesian(ylim=c(0,ymax*1.05),expand=0)
-    }
+    coord_cartesian(ylim=c(0,ymax*1.05),expand=0)+
+    scale_color_identity() + scale_fill_identity()
 
   if(is_release_data){
     g1 <- g1 + geom_point(data=dplyr::filter(alldata,type=="release"),
@@ -534,11 +479,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
     if(sum(SRdata$weight=="0")>0) cap1 <- str_c(cap1, "\n パラメータ推定に利用（丸）,利用していない（バツ） ")
     if(is_release_data) cap1 <- str_c(cap1, "\n 灰色：放流＋天然、黒：天然のみ")
 
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
-      g1 <- g1+labs(caption=cap1)
-    }else{
-      g1 <- g1+labs(caption=cap1,family = font_MAC)
-    }
+    g1 <- g1+labs(caption=cap1)
   }
 
   if(!is.null(refs)){
@@ -579,8 +520,6 @@ SRplot_gg <- plot.SR <- function(...){
 
 compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=TRUE, output_folder=""){
 
-  font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
-
   if(newplot){
     if(!is.null(SRlist[[1]]$input)){
       SRdata <- purrr::map_dfr(SRlist[], function(x){
@@ -602,20 +541,12 @@ compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=T
         SRpred <- purrr::map_dfr(SRlist,
                              function(x) x$pred, .id="SR_type")
         #SRpred$再生産関係 <- as.factor(SRpred$再生産関係)
-    font_MAC <- "HiraginoSans-W3"#"Japan1GothicBBB"#
-
     g1 <- ggplot(data=SRpred)
     g1 <- g1 + geom_line(data=SRpred,
                          mapping=aes(x=SSB/biomass.unit,y=R/number.unit, linetype=SR_type, col=SR_type))
     g1 <- g1 + geom_point(data=SRdata, mapping=aes(x=SSB/biomass.unit, y=R/number.unit), color="black")
-    if(!isTRUE(stringr::str_detect(version$os, pattern="darwin"))){
     g1 <- g1 + xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
       labs(x = "親魚量（千トン）", y = "加入尾数（百万尾)") + theme_SH(legend.position="top")
-    }else{
-      g1 <- g1 + xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
-        labs(x = "親魚量（千トン）", y = "加入尾数（百万尾)") + theme_SH(legend.position="top")+theme(text = element_text(family = font_MAC))
-    }
-    #g1
     ggsave_SH(g1, file=paste("./",output_folder,"/resSRcomp.png",sep=""))
     g1
   }
@@ -678,9 +609,9 @@ compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=T
 #' @export
 #'
 
-SRregime_plot <- plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="SSB",yscale=1,ylabel="R",
+plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="SSB",yscale=1,ylabel="R",
                            labeling.year = NULL, show.legend = TRUE, legend.title = "Regime",regime.name = NULL,
-                           base_size = 16, add.info = TRUE, themeSH = FALSE) {
+                           base_size = 16, add.info = TRUE, themeSH = FALSE,last_year_color=5) {
   pred_data = SRregime_result$pred %>% mutate(Category = "Pred")
   obs_data = select(SRregime_result$pred_to_obs, -Pred, -resid) %>% mutate(Category = "Obs")
   if(!is.null(SRregime_result$input$SRdata$weight)){
@@ -689,6 +620,7 @@ SRregime_plot <- plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="
     obs_data$weight <- factor(1,levels=c("0","1"))
   }
 
+  if(last_year_color>0) last_years <- rev(sort(SRdata$year))[1:last_year_color] else last_years <- ""
   combined_data = full_join(pred_data, obs_data) %>%
     mutate(Year = as.double(Year))
   combined_data = rename(combined_data,Regime.num=Regime)
@@ -696,7 +628,8 @@ SRregime_plot <- plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="
     regime.name = c(unique(as.character(combined_data$Regime.num)))
   }
   Regime <- as.character(regime.name[combined_data$Regime.num])
-  combined_data <- combined_data %>% mutate(Regime)
+  combined_data <- combined_data %>% mutate(Regime) %>%
+    mutate(fill_color=ifelse(Year%in%last_years, "red", "white"))
 
   if(prod(as.numeric(as.character(combined_data$weight)),na.rm=T)==0){
     scaleshapeval <- c(3,20)
@@ -713,26 +646,22 @@ SRregime_plot <- plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="
   if (is.null(labeling.year)) labeling.year <- c(min(obs_data$Year),obs_data$Year[obs_data$Year %% 5 == 0],max(obs_data$Year))
   combined_data = combined_data %>%
     mutate(label=if_else(is.na(Year),as.numeric(NA),if_else(Year %in% labeling.year, Year, as.numeric(NA)))) %>%
-    mutate(SSB = SSB/xscale, R = R/yscale)
+    mutate(SSB = SSB/xscale, R = R/yscale) 
 
   g1 = ggplot(combined_data, aes(x=SSB,y=R,label=label)) +
     geom_path(data=dplyr::filter(combined_data, Category=="Pred"),aes(group=Regime,colour=Regime,linetype=Regime),size=2, show.legend = show.legend)+
-    geom_point(data=dplyr::filter(combined_data, Category=="Obs"),aes(group=Regime,colour=Regime,shape=Weight),size=3, show.legend = show.legend) +
+    geom_path(data=dplyr::filter(combined_data, Category=="Obs"),colour="darkgray",size=1)+
+    geom_point(data=dplyr::filter(combined_data, Category=="Obs"),aes(group=Regime,color=Regime,shape=Weight)+#,fill=fill_color),
+               size=3, show.legend = show.legend,shape=21) +    
     scale_shape_manual(values = scaleshapeval) +
     scale_color_manual(values = seq(length(unique(regime.name)))) +
-    geom_path(data=dplyr::filter(combined_data, Category=="Obs"),colour="darkgray",size=1)+
+    #    scale_fill_manual(values = seq(length(unique(regime.name)))) +
+#    scale_fill_identity() +    
     xlab(xlabel)+ylab(ylabel)+
     ggrepel::geom_label_repel()+
     theme_bw(base_size=base_size)+
     coord_cartesian(ylim=c(0,max(combined_data$R)*1.05),expand=0)
-  # if (show.legend) {
-  #   if (is.null(regime.name)) {
-  #     regime.name = unique(combined_data$Regime)
-  #   }
-  #   g1 = g1 + #scale_colour_hue(name=legend.title, labels = regime.name) +
-  #     scale_linetype_discrete(name=legend.title, labels = regime.name)
-  # }
-  if(themeSH) g1 = g1 + theme_SH()
+  if(themeSH) g1 = g1 + theme_SH(legend.position="top")
   if (add.info) {
     if (is.null(SRregime_result$input$regime.year)) {
       g1 = g1 +
@@ -760,12 +689,6 @@ SRregime_plot <- plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="
   g1
 }
 
-#'
-#' @export
-
-plot_SRregime <- function(...){
-  SRregime_plot(...)
-}
 
 # 将来予測用 ----
 
@@ -2198,4 +2121,87 @@ apply_minor_ticks <- function(plot, minor_breaks=1){
     scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks),
                        breaks      =scales::breaks_pretty())
 #    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))  
+}
+
+#'
+#' モデル平均の場合の再生産関係のプロット
+#'
+#' 汎用化していない（２つのモデルの平均の場合だけです）
+#' 
+#' @export
+#' 
+
+plot_SRaverage <- function(data_future_MSY, res_vpa_updated, SR_plot_label, CI=0.9, last_year_color=5){
+    weight     <- data_future_MSY$input$model_average_option$weight
+    res_SR_MSY   <- data_future_MSY$input$model_average_option$SR_list
+    # モデル平均の再生産関係は関数化していない。以下の記述は汎用的でない。
+    n <- 100000
+    weight_number <- arrange_weight(round(weight,2),n)
+    ssb_vector <- seq(from=0,to=max(res_SR_MSY[[1]]$input$SRdata$SSB) * 1.2,length=100)
+    sd_vector <- c(sqrt((res_SR_MSY[[1]]$pars$sd)^2/(1-res_SR_MSY[[1]]$pars$rho^2)),
+                   sqrt((res_SR_MSY[[2]]$pars$sd)^2/(1-res_SR_MSY[[2]]$pars$rho^2)))
+    rec_expect <- NULL
+    set.seed(1)
+    probs.tmp <- c((1-CI)/2,0.5,1-(1-CI)/2)
+    for(i in 1:length(ssb_vector)){
+      rand_error1 <- rnorm(n,-0.5*sd_vector[1]^2,sd_vector[1])
+      rand_error2 <- rnorm(n,-0.5*sd_vector[2]^2,sd_vector[2])
+      fun1 <- get(str_c("SRF_",res_SR_MSY[[1]]$input$SR))
+      fun2 <- get(str_c("SRF_",res_SR_MSY[[2]]$input$SR))      
+      fun1_dist <- fun1(a=res_SR_MSY[[1]]$pars$a,b=res_SR_MSY[[1]]$pars$b,x=ssb_vector[i])*exp(rand_error1)
+      fun2_dist <- fun2(a=res_SR_MSY[[2]]$pars$a,b=res_SR_MSY[[2]]$pars$b,x=ssb_vector[i])*exp(rand_error2)
+      dist_tmp <- c(fun1_dist[weight_number[[1]]],fun2_dist[weight_number[[2]]])
+      rec_expect <- bind_rows(rec_expect,
+                              c("mean"= mean(dist_tmp),quantile( dist_tmp,probs=probs.tmp),scenario=1,ssb=ssb_vector[i]),
+                              c("mean"=mean(fun1_dist),quantile(fun1_dist,probs=probs.tmp),scenario=2,ssb=ssb_vector[i]),
+                              c("mean"=mean(fun2_dist),quantile(fun2_dist,probs=probs.tmp),scenario=3,ssb=ssb_vector[i]))
+    }
+
+    names(rec_expect)[c(2:4)] <- c("L5per","Median","H5per")
+
+    rec_expect <- rec_expect %>%
+      mutate(SR_model = case_when(scenario==1~"(c) Average",
+                                  scenario==2~str_c("(b) ",res_SR_MSY[[1]]$input$SR),
+                                  scenario==3~str_c("(a) ", res_SR_MSY[[2]]$input$SR))) %>%
+      mutate(SR_model = factor(SR_model))
+
+    if(is.null(is.null(res_SR_MSY[[1]]$input$SRdata$weight))){
+      SRdata_old <- tibble(res_SR_MSY[[1]]$input$SRdata,weight=res_SR_MSY[[1]]$input$w)
+    }else{
+      SRdata_old <- tibble(res_SR_MSY[[1]]$input$SRdata)
+    }
+    SRdata_old <- SRdata_old %>% dplyr::filter(weight>0)
+
+    if(last_year_color>0) last_years <- rev(sort(SRdata$year))[1:last_year_color] else last_years <- ""
+    SRdata <- get.SRdata(res_vpa_updated,return.df=TRUE) %>%
+      mutate(fill_color=ifelse(year%in%last_years, "red", "white"))
+    glist <- list()
+    for(i in 1:2){
+      glist[[i]] <- rec_expect %>% ggplot() +
+        geom_ribbon(data=dplyr::filter(rec_expect,SR_model=="(c) Average"),
+                    aes(x=ssb,ymin=L5per,ymax=H5per),fill="gray",alpha=0.7)
+      if(i==1) glist[[i]] <- glist[[i]] + geom_point(data=SRdata_old,mapping=aes(x=SSB,y=R),color="#92D050",shape=21,size=4,fill="#92D050")
+      glist[[i]] <- glist[[i]] +
+        geom_line(data=dplyr::filter(rec_expect,SR_model!="(c) Average"),
+                  aes(x=ssb,y   =L5per,color=SR_model,lty=SR_model),size=0.5)+
+        geom_line(data=dplyr::filter(rec_expect,SR_model!="(c) Average"),
+                  aes(x=ssb,y   =H5per,color=SR_model,lty=SR_model),size=0.5)+
+        geom_line(aes(x=ssb,y   =Median ,color=SR_model, lty=SR_model),size=1) +
+        theme_SH() + #facet_wrap(.~SR_model)
+        scale_color_hue(l=40) +
+        ylab("加入量（100万尾）") + xlab("親魚量(トン)") +
+        geom_path(data=SRdata,mapping=aes(x=SSB,y=R),color=1)+
+        geom_point(data=SRdata,mapping=aes(x=SSB,y=R,fill=fill_color),color=1,shape=21)+
+        scale_color_manual(values=c("darkgreen","darkred",1))+
+        scale_linetype_manual(values=c(2,3,1))+
+        ggrepel::geom_text_repel(data=dplyr::filter(SRdata,year%in%SRplot_label_year),
+                                 segment.alpha=0.5,nudge_y=5,
+                                 aes(y=R,x=SSB,label=year))+
+        coord_cartesian(xlim=c(0,max(SRdata_old$SSB))) +
+        scale_x_continuous(labels = scales::comma, expand=expansion(mult=c(0, 0.05)))+
+        scale_y_continuous(labels = scales::comma, expand=expansion(mult=c(0, 0.05)))+
+        scale_fill_identity()
+    }
+
+    return(glist)
 }
