@@ -1,8 +1,10 @@
 context("test for graphic functions (level 0)")
 
 test_that("plot_futures",{
-  g1 <- plot_futures(vpares=res_vpa_example,future.list=list(res_future_HSL2,res_future_HSL1))
-  g2 <- plot_futures(vpares=NULL,future.list=list(res_future_HSL2,res_future_HSL1))
+  g1 <- plot_futures(vpares=res_vpa_example,future.list=list(res_future_HSL2,res_future_HSL1),
+                     Btarget=100000, Blimit=50000, Bban=10000)
+  g2 <- plot_futures(vpares=NULL,future.list=list(res_future_HSL2,res_future_HSL1)) %>%
+      apply_minor_ticks()
   expect_equal(class(g1)[1],"gg")
   expect_equal(class(g2)[1],"gg")
 })
@@ -12,6 +14,7 @@ test_that("plot.futures",{
   expect_equal(class(g1)[1],"list")
 })
 
+
 test_that("plot.future",{
   g1 <- plot.future(res_future_HSL2)
   g2 <- plot.future(res_future_HSL1)
@@ -20,8 +23,8 @@ test_that("plot.future",{
 })
 
 test_that("plot_vpa",{
-  g1 <- plot_vpa(res_vpa_example)
-  g2 <- plot_vpa(list(res_vpa_example,res_vpa_example))
+  g1 <- plot_vpa(res_vpa_example) 
+  g2 <- plot_vpa(list(res_vpa_example,res_vpa_example), is_minor_ticks=FALSE)
   expect_equal(class(g1)[1],"gg")
   expect_equal(class(g2)[1],"gg")
 })

@@ -21,11 +21,11 @@ plot_futures(
   number.unit = 1,
   number.name = "",
   RP_name = c("Btarget", "Blimit", "Bban"),
-  Btarget = 0,
-  Blimit = 0,
-  Bban = 0,
-  MSY = 0,
-  Umsy = 0,
+  Btarget = NA,
+  Blimit = NA,
+  Bban = NA,
+  MSY = NA,
+  Umsy = NA,
   SPRtarget = NULL,
   exclude.japanese.font = FALSE,
   average_lwd = 1,
@@ -37,6 +37,7 @@ plot_futures(
   type = "detail",
   font.size = 16,
   ncol = 3,
+  ncol_legend = 2,
   remove.last.vpa.year = FALSE
 )
 }
@@ -67,15 +68,15 @@ plot_futures(
 
 \item{RP_name}{管理基準値をどのように名前つけるか}
 
-\item{Btarget}{Btargetの値}
+\item{Btarget}{Btargetの値、設定しない場合はNA（デフォルトはNA）}
 
-\item{Blimit}{Blimitの値}
+\item{Blimit}{Blimitの値、設定しない場合はNA（デフォルトはNA）}
 
-\item{Bban}{Bbanの値}
+\item{Bban}{Bbanの値、設定しない場合はNA（デフォルトはNA）}
 
-\item{MSY}{MSYの値}
+\item{MSY}{MSYの値、設定しない場合はNA（デフォルトはNA）}
 
-\item{Umsy}{Umsyの値}
+\item{Umsy}{Umsyの値、設定しない場合はNA（デフォルトはNA）}
 
 \item{SPRtarget}{MSYのときのSPRの値}
 
