@@ -1889,7 +1889,7 @@ est_MSYRP <- function(data_future, ncore=0, optim_method="R", compile_tmb=FALSE,
                                     multi_init = res_future_MSY$multi*1.2,
                                     multi_lower= res_future_MSY$multi,
                                     multi_upper= multi_upper_PGY,
-                                    objective="PGY"
+                                    objective= PGY
                                     ))
         if(only_lowerPGY=="both"){
             obj_mat2 <- tibble(RP_name    = str_c(PGY,candidate_PGY,"upper",sep="_"),
