@@ -472,8 +472,8 @@ make_future_data <- function(res_vpa,
 #' @param max_exploitation_rate 漁獲量一定方策を実施する際のMを考慮した上での漁獲率の上限（将来的にはmake_future_data関数に入れたい)
 #' @param do_MSE 簡易MSEを実施するか
 #' @param MSE_input_data 簡易MSEを実施する場合、ABC計算するための将来予測を実施するための設定ファイル
-#' @param MSE_nsim 簡易MSEを実施する場合、ABC計算するための将来予測の繰り返し回数。ここを1にすると、決定論的な将来予測の漁獲量が用いられる。
-#' @param MSE_sd 簡易MSEをする場合の加入変動の大きさ。ここをゼロにすると決定論的な将来予測の値を将来の漁獲量として用いる。その場合MSE_nsimは自動的に２に設定される。単純なモデルの場合、ここがゼロでも多分問題ない。モデル平均を使っている場合にはちゃんとした簡易MSEをすること。
+#' @param MSE_nsim 簡易MSEを実施する場合、ABC計算するための将来予測の繰り返し回数。
+#' @param MSE_sd 簡易MSEをする場合の加入変動の大きさ。ここをゼロにすれば決定論的な将来予測の値を得られる。その場合MSE_nsimは自動的に２に設定される。単純なモデルの場合、ここがゼロでも多分問題ない。モデル平均を使っている場合にはちゃんとした簡易MSEをすること。リサンプリングオプションの場合も使えない。
 #' @param objective MSY:MSYの推定、PGY:PGYの値をobj_valueに入れる、percentB0:B0パーセント、何％にするかはobj_valueで指定, SSB:obj_valueで指定した特定の親魚資源量に一致するようにする
 #' @param obj_stat 目的関数を計算するときに利用する計算方法（"mean"だと平均、"median"だと中央値、"geomean"だと幾何平均）
 #' @param obj_value 目的とする値
@@ -914,7 +914,14 @@ future_vpa_R <- function(naa_mat,
       HCR_realized[t,,"original_ABC_plus"] <- HCR_realized[t,,"original_ABC"] + HCR_realized[t,,"reserved_catch"]
       # 比率で繰越量を決める場合
       if(all(!is.na(HCR_mat[t,,"TAC_reserve_rate"]))){
-        HCR_mat[t,,"expect_wcatch"] <- HCR_realized[t,,HCR_reserve_denom] * (1-HCR_mat[t,,"TAC_reserve_rate"])
+        if(HCR_reserve_denom=="original_ABC_plus"){
+          HCR_mat[t,,"expect_wcatch"] <- HCR_realized[t,,HCR_reserve_denom] * (1-HCR_mat[t,,"TAC_reserve_rate"])
+        }
+        if(HCR_reserve_denom=="original_ABC"){
+          HCR_mat[t,,"expect_wcatch"] <- HCR_realized[t,,"original_ABC_plus"] - HCR_realized[t,,"original_ABC"] * HCR_mat[t,,"TAC_reserve_rate"]
+          HCR_mat[t,,"expect_wcatch"] <- ifelse(HCR_mat[t,,"expect_wcatch"]<0, 0.01, HCR_mat[t,,"expect_wcatch"])
+        }        
+        
       }
       # 漁獲量で繰越量を決める場合
       if(all(!is.na(HCR_mat[t,,"TAC_reserve_amount"]))){
@@ -1720,8 +1727,8 @@ update_maa_mat <- function(maa,rand,naa,pars_b0,pars_b1,min_value,max_value){
 #' @encoding UTF-8
 
 get_wcatch <- function(res){
-    if(class(res)=="future_new")  return(apply(res$wcaa,c(2,3),sum))
-    if(class(res)=="vpa" || "tune" %in% names(res$input)){
+    if(class(res)%in%"future_new")  return(apply(res$wcaa,c(2,3),sum))
+    if(class(res)%in%"vpa" || "tune" %in% names(res$input)){
         if(!is.null(res$input$dat$waa.catch)) return(colSums(res$input$dat$caa * res$input$dat$waa.catch,na.rm=T))
         if(is.null(res$input$dat$waa.catch)) return(colSums(res$input$dat$caa * res$input$dat$waa,na.rm=T))
     }
@@ -1729,14 +1736,14 @@ get_wcatch <- function(res){
 
 #' @export
 get_ssb <- function(res){
-    if(class(res)=="future_new")  return(res$SR_mat[,,"ssb"])
-    if(class(res)=="vpa" || "tune" %in% names(res$input))  return(colSums(res$ssb, na.rm=TRUE))
+    if(class(res)%in%"future_new")  return(res$SR_mat[,,"ssb"])
+    if(class(res)%in%"vpa" || "tune" %in% names(res$input))  return(colSums(res$ssb, na.rm=TRUE))
 }
 
 #' @export
 get_U <- function(res){
-    if(class(res)=="future_new")  return(res$HCR_realized[,,"wcatch"]/apply(res$naa * res$waa_catch,c(2,3),sum))
-    if(class(res)=="vpa" || "tune" %in% names(res$input)){
+    if(class(res)%in%"future_new")  return(res$HCR_realized[,,"wcatch"]/apply(res$naa * res$waa_catch,c(2,3),sum))
+    if(class(res)%in%"vpa" || "tune" %in% names(res$input)){
         wcatch <- get_wcatch(res)
         biomass <- colSums(res$naa * res$input$dat$waa,na.rm=T)
         return(wcatch/biomass)
