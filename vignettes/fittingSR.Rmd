@@ -95,7 +95,7 @@ fit.SRのときと同様にout.SRで結果をtxtファイルに出力できま�
 out.SR(resR1, filename = "Regime1")
 
 ## プロットする。
-(g2 = SRregime_plot(resR1, regime.name = c("Usual", "High")))
+(g2 = plot_SRregime(resR1, regime.name = c("Usual", "High")))
 
 ## 図をpng形式で保存する。
 ggplot2::ggsave(g2, file = "SRregime_curve.png", unit = "mm", width = 240, height = 120, 

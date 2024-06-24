@@ -364,7 +364,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
 
   SRdata <- as_tibble(SR_result$input$SRdata) %>%
       mutate(type="obs")
-  if(is.null(SRdata$weight)) SRdata$weight <- SR_result$input$w
+  if(!"weight" %in% colnames(SRdata)) SRdata <- SRdata %>% mutate(weight=SR_result$input$w)
   SRdata <- SRdata %>%
     mutate(weight=ifelse(weight>0, 1, 0)) %>%
     mutate(weight=factor(weight,levels=c("1","0")))
@@ -502,7 +502,8 @@ SRplot_gg <- plot.SR <- function(...){
 #' @param SRlist 再生産関係の推定結果のリスト。
 #' @param biomass.unit 資源量の単位
 #' @param number.unit 尾数の単位
-#'
+#' @param newplot なんのためのオプションか不明
+#' 
 #' @examples
 #' \dontrun{
 #' data(res_sr_HSL1)
@@ -538,19 +539,24 @@ compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=T
 
     if(is.null(SRlist)) names(SRlist) <- 1:length(SRlist)
 
-        SRpred <- purrr::map_dfr(SRlist,
+    SRpred <- purrr::map_dfr(SRlist,
                              function(x) x$pred, .id="SR_type")
-        #SRpred$再生産関係 <- as.factor(SRpred$再生産関係)
+    #SRpred$再生産関係 <- as.factor(SRpred$再生産関係)
     g1 <- ggplot(data=SRpred)
-    g1 <- g1 + geom_line(data=SRpred,
-                         mapping=aes(x=SSB/biomass.unit,y=R/number.unit, linetype=SR_type, col=SR_type))
-    g1 <- g1 + geom_point(data=SRdata, mapping=aes(x=SSB/biomass.unit, y=R/number.unit), color="black")
-    g1 <- g1 + xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
+    if(!"Regime" %in% colnames(SRpred)){
+      g1 <- g1 + geom_line(data=SRpred,
+                           mapping=aes(x=SSB/biomass.unit,y=R/number.unit, linetype=SR_type, col=SR_type)) 
+    }
+    else{ # regime case
+      g1 <- g1 + geom_line(data=SRpred,
+                           mapping=aes(x=SSB/biomass.unit,y=R/number.unit, linetype=SR_type, col=SR_type, lty=Regime)) 
+    }
+    g1 <- g1 + geom_point(data=SRdata, mapping=aes(x=SSB/biomass.unit, y=R/number.unit), color="black") +
+      xlim(c(0,max(SRdata$SSB/biomass.unit))) + ylim(c(0,max(SRdata$R/number.unit))) +
       labs(x = "親魚量（千トン）", y = "加入尾数（百万尾)") + theme_SH(legend.position="top")
-    ggsave_SH(g1, file=paste("./",output_folder,"/resSRcomp.png",sep=""))
-    g1
   }
   else{
+    # newplot=Fがなんのためにあるのか不明・・・
     if(!is.null(SRlist[[1]]$input)){
       SRdata <- purrr::map_dfr(SRlist[], function(x){
         x$input$SRdata %>%
@@ -568,16 +574,16 @@ compare_SRfit <- function(SRlist, biomass.unit=1000, number.unit=1000, newplot=T
 
     if(is.null(SRlist)) names(SRlist) <- 1:length(SRlist)
 
-  g1 <- plot_SRdata(SRdata,type="gg")
+    g1 <- plot_SRdata(SRdata,type="gg")
 
-  SRpred <- purrr::map_dfr(SRlist,
-                           function(x) x$pred, .id="SR_type")
-  g1 <- g1+geom_line(data=SRpred,mapping=aes(x=SSB/biomass.unit,y=R/number.unit,col=SR_type)) +
-    theme(legend.position="top") +
-    xlab(str_c("SSB (x",biomass.unit,")")) +
-    ylab(str_c("Number (x",number.unit,")"))
-  g1
+    SRpred <- purrr::map_dfr(SRlist,
+                             function(x) x$pred, .id="SR_type")
+    g1 <- g1+geom_line(data=SRpred,mapping=aes(x=SSB/biomass.unit,y=R/number.unit,col=SR_type)) +
+      theme(legend.position="top") +
+      xlab(str_c("SSB (x",biomass.unit,")")) +
+      ylab(str_c("Number (x",number.unit,")"))
   }
+  return(g1)
 }
 
 #' fit.SRregimeの結果で得られた再生産関係をプロットするための関数
@@ -620,7 +626,7 @@ plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="SSB",yscale=1,yla
     obs_data$weight <- factor(1,levels=c("0","1"))
   }
 
-  if(last_year_color>0) last_years <- rev(sort(SRdata$year))[1:last_year_color] else last_years <- ""
+  if(last_year_color>0) last_years <- rev(sort(SRregime_result$input$SRdata$year))[1:last_year_color] else last_years <- ""
   combined_data = full_join(pred_data, obs_data) %>%
     mutate(Year = as.double(Year))
   combined_data = rename(combined_data,Regime.num=Regime)
@@ -651,7 +657,7 @@ plot_SRregime <- function (SRregime_result,xscale=1000,xlabel="SSB",yscale=1,yla
   g1 = ggplot(combined_data, aes(x=SSB,y=R,label=label)) +
     geom_path(data=dplyr::filter(combined_data, Category=="Pred"),aes(group=Regime,colour=Regime,linetype=Regime),size=2, show.legend = show.legend)+
     geom_path(data=dplyr::filter(combined_data, Category=="Obs"),colour="darkgray",size=1)+
-    geom_point(data=dplyr::filter(combined_data, Category=="Obs"),aes(group=Regime,color=Regime,shape=Weight)+#,fill=fill_color),
+    geom_point(data=dplyr::filter(combined_data, Category=="Obs"),aes(group=Regime,color=Regime,shape=Weight), #,fill=fill_color),
                size=3, show.legend = show.legend,shape=21) +    
     scale_shape_manual(values = scaleshapeval) +
     scale_color_manual(values = seq(length(unique(regime.name)))) +
