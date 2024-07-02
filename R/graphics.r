@@ -396,7 +396,7 @@ plot_SR <- function(SR_result,refs=NULL,xscale=1000,xlabel="千トン",yscale=1,
   if(is.null(labeling.year)) labeling.year <- c(tmp[tmp%%5==0],year.max)
   alldata <- alldata %>% mutate(pick.year=ifelse(year%in%labeling.year,year,""))
   if(last_year_color > 0){
-    last_years <- rev(sort(unique(oSRdata$year)))[1:last_year_color]
+    last_years <- rev(sort(unique(SRdata$year)))[1:last_year_color]
     alldata <- alldata %>% mutate(last_years_fill =ifelse(year%in%last_years,"red","white"))
   }
   else{
