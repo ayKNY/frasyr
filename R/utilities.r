@@ -3195,13 +3195,14 @@ calculate_all_pm <- function(res_future, SBtarget=-1, SBlimit=-1, SBban=-1, SBmi
     ABC_year     <- res_future$mat_year$year[res_future$mat_year$is_manage] %>% min()
   }
   period_range <- list(0:9, 0:4, 5:9, 1:10, 1:4, 6:10)
+  ss <- rep(TRUE,length(period_extra))
   if(!is.null(period_extra)){
     for(i in 1:length(period_extra)){
-      if(sum(purrr::map_lgl(period_range, function(x) all(x==period_extra[[i]])))==0){
-        period_range <- c(period_range, period_extra[i])
-      }
-    }
-  }
+      for(j in 1:length(period_range)){
+        if(length(period_extra[[i]])==length(period_range[[j]]) && all(period_extra[[i]]==period_range[[j]]))
+          ss[[i]] <- FALSE
+      }}}
+  period_range <- c(period_range, period_extra[ss])
   period_list  <- purrr::map(period_range, function(x) ABC_year + x)
   names(period_list) <- purrr::map_chr(period_list, function(x) str_c(range(x),collapse="."))
 

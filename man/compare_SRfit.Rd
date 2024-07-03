@@ -19,6 +19,8 @@ compare_SRfit(
 \item{biomass.unit}{資源量の単位}
 
 \item{number.unit}{尾数の単位}
+
+\item{newplot}{なんのためのオプションか不明}
 }
 \description{
 複数の再生産関係を比較する関数
