@@ -1160,18 +1160,22 @@ plot_resboot_vpa <- function(res, B_ite = 1000, B_method = "p", ci_range = 0.95)
   if(ci_range >= 1) stop(paste0('"ci_range" must be less than 1'))
   res$input$plot <- FALSE
   res_boo <- boo.vpa(res, B = B_ite, method = B_method)
-
+  
   year <- res_boo[[1]]$index %>% colnames() %>% as.numeric()
   ssb_mat <- abund_mat <- biomass_mat <- matrix(NA, nrow = B_ite, ncol = length(year))
-  cor_mat <- NULL
+  cor_mat <-   NULL
+  n_error <- 0
+  
   for(i in 1:B_ite){
     tmp <- res_boo[[i]]
+	if(tmp[1]=="try-error"){n_error <- n_error + 1} else {n_error <- n_error } 
     if(tmp[1]=="try-error")next
     ssb_mat[i,] <- colSums(tmp$ssb, na.rm = TRUE)
     abund_mat[i,] <- as.numeric(tmp$naa[1,])
     biomass_mat[i,] <- colSums(tmp$baa, na.rm = TRUE)
     cor_num <- c(tmp$Fc.at.age, tmp$b, last(colSums(tmp$ssb)), last(as.numeric(tmp$naa[1,]))) %>%
       unlist() %>% as.numeric()
+	  
     if(res$input$last.catch.zero){
       cor_num <- c(tail(colSums(tmp$ssb),2)[1] %>% as.numeric(),
                    tail(tmp$naa[1,],2)[1] %>% as.numeric())
@@ -1179,7 +1183,9 @@ plot_resboot_vpa <- function(res, B_ite = 1000, B_method = "p", ci_range = 0.95)
     cor_mat <- rbind(cor_mat, cor_num)
   } # for(i)
   cor_mat <- as.data.frame(cor_mat)
-  rownames(cor_mat) <- str_c("ite",1:B_ite)
+  
+  rownames(cor_mat) <- str_c("ite",1:(B_ite-n_error))
+  
   colnames(cor_mat) <- c(str_c("term.F_age",1:length(tmp$Fc.at.age)-1),
                          str_c("b",1:length(tmp$b)),
                          "SSB_last", "Recruitment_last")
