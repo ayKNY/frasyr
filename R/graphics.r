@@ -1519,7 +1519,7 @@ plot_kobe_gg <- plot_kobe <- function(FBdata=NULL,
 
   max.B <- max(c(FBdata$Bratio,xscale),na.rm=T)
   max.F <- max(c(FBdata$Fratio,yscale),na.rm=T)
-
+  
   red.color <- "indianred1" # rgb(238/255,121/255,72/255)
   yellow.color <- "khaki1" # rgb(245/255,229/255,107/255)
   green.color <- "olivedrab2" # rgb(175/255,209/255,71/255) #"olivedrab2"#rgb(58/255,180/255,131/255)
@@ -1546,7 +1546,7 @@ plot_kobe_gg <- plot_kobe <- function(FBdata=NULL,
                                             y=max.F*0.85,
                                             label=RP.label),
                                 aes(x=x,y=y,label=label),
-                                direction="x",nudge_y=max.F*0.9,size=11*0.282)
+                                direction="x",nudge_y=max.F*0.2,size=11*0.282)
   }
 
   if(!is.null(beta)){
