@@ -1381,7 +1381,7 @@ make_array <- function(d3_mat, pars, pars.year, year_replace_future){
   else{
     years <- dimnames(d3_mat)[[2]]
     if(is.null(pars)){
-      pars.future <- rowMeans(d3_mat[,years%in%pars.year,1])
+      pars.future <- rowMeans(d3_mat[,years%in%pars.year,1,drop=F])
     }
     else{
       if(length(pars)==dim(d3_mat)[[1]]) pars.future <- pars
