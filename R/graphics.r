@@ -159,14 +159,28 @@ plot_vpa <- function(vpalist,
     ylab("value") + xlab("Year")+
     guides(color=guide_legend(nrow=2))
 
-  if(!(is.null(plot_year))){
+ apply_minor_ticks2 <- function(plot, minor_breaks=1){
+  plot +   # サブ目盛の設定
+    guides(x=guide_axis(minor.ticks=TRUE), # guideは凡例を制御するための関数。目盛りのスタイルを設定するのはtheme関数だが、どんな目盛りをつけるかはguidesの範疇になる？
+           y=guide_axis(minor.ticks=TRUE)) + 
+    # サブ目盛りをつけるので、目盛りの長さを少し長くし、線幅を狭くする
+    theme(axis.ticks.length=unit(0.17,"cm"), # default=unit(0.15,"cm")
+          axis.ticks=element_line(linewidth=0.4)) + # default=0.5
+    # サブ目盛りの間隔の設定
+    scale_x_continuous(limits=c(plot_year[1], max(plot_year)), minor_breaks=scales::breaks_width(minor_breaks),
+                       breaks      =scales::breaks_pretty())
+#    scale_x_continuous(minor_breaks=scales::breaks_width(minor_breaks))  
+}
+
+if(is_minor_ticks==FALSE &!(is.null(plot_year))){
     g2 <- g1 + xlim(plot_year[1], max(plot_year))
   } else {
     g2 <- g1
   } # もし動かない場合はこれまで通りに作図(浜辺'20/06/30)
 
-  if(is_minor_ticks==TRUE) g2 <- apply_minor_ticks(g2)
-  return(g2)
+  if(is_minor_ticks==TRUE & is.null(plot_year)) g2 <- apply_minor_ticks(g2)
+  if(is_minor_ticks==TRUE & !(is.null(plot_year))) g2 <- apply_minor_ticks2(g2)
+  g2
 }
 
 #' F currentをプロットする
