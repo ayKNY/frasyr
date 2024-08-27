@@ -1425,7 +1425,7 @@ plot_yield <- function(MSY_obj,refs_base,
       ggrepel::geom_label_repel(data=refs_base,
                                 aes(y=ymax*ylim.scale*0.85,
                                     x=SSB,label=refs.label),
-                                direction="x",size=11*0.282,nudge_y=ymax*ylim.scale*0.9)
+                                direction="x",size=11*0.282,nudge_y=ymax*ylim.scale*0.1)
   }
 
   if(isTRUE(labeling)){
