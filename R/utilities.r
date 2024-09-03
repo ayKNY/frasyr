@@ -3391,3 +3391,31 @@ format_type <- function(){
             "limit",  "#EDB918", "dotdash",
             "ban",   "#C73C2E", "dotted")
 }
+
+#'  make_future_data()の返り値のnaa_matの構造を利用して年齢別単価の配列を作成する
+#' @param data_future :list　make_future_data()の返り値
+#' @param paa ：numeric　各年齢の単価
+#' @param paa_future :numeric ベクトルまたはNULL 将来予測開始年以降に異なる年齢別単価を充てる場合に使用する
+
+#' @export
+#'
+add_paa_mat <- function(data_future, paa, paa_future = NULL){
+
+  #number of year
+  vpa_year <- ncol(data_future$input$res_vpa$naa)
+  total_year <- data_future$data$total_nyear
+  form <- data_future$data$naa
+
+  if(is.null(paa_future)){
+    form <- apply(form, c(2,3), function(x){x <- paa}) #過去から将来予測の最終年に至るまで同じpaaを仮定
+  }else{
+    form[ ,1:vpa_year, ] <- paa
+    form[ , vpa_year + 1:totalyear, ] <- paa_future　#vpaの翌年から別のpaaを仮定した場合
+  }
+
+  class(form) <- "myarray"
+  data_future$data$paa_mat <- form
+  return(data_future)
+}
+
+
