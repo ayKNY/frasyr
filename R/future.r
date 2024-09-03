@@ -725,6 +725,12 @@ future_vpa_R <- function(naa_mat,
     # max_F, max_exploitation_rateはそのままMSEに引き継ぐとしたけどやめる
     #
     # max_F_MSE <- max_F; max_exploitation_rate_MSE <- max_exploitation_rate
+
+    #年齢別単価がインプットデータにある場合MSE上でも総漁獲金額を計算する
+    if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+      dimnames(SR_MSE)$par[14] <- "real_true_rev"
+      dimnames(SR_MSE)$par[15] <- "pseudo_true_rev"
+    }
   }
 
   F_mat <- N_mat <-  naa_mat
@@ -843,8 +849,18 @@ future_vpa_R <- function(naa_mat,
         MSE_dummy_data$HCR_mat[,,"TAC_upper_CV"] <- NA
         MSE_dummy_data$HCR_mat[,,"TAC_lower_CV"] <- NA
 
+        if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+          MSE_dummy_data$paa_mat[ , , 1] <- MSE_input_data$data$paa_mat[ , , 1]
+        }
+
         # TACどおりに漁獲すると将来予測でも仮定して将来予測する!!
-        if(MSE_catch_exact_TAC==TRUE) MSE_dummy_data$HCR_mat[t-1,,"expect_wcatch"] <- HCR_mat[t-1,i,"expect_wcatch"]
+        if(MSE_catch_exact_TAC==TRUE) {
+          MSE_dummy_data$HCR_mat[t-1,,"expect_wcatch"] <- HCR_mat[t-1,i,"expect_wcatch"]
+
+          if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+            MSE_dummy_data$HCR_mat[t-1,,"expect_revenue"] <- HCR_mat[t-1,i,"expect_revenue"]
+          }
+          }
 
         # 漁獲量に上限設定があってそれが厳しい場合に上限を予測値から決定しないといけない
         if(sum(HCR_mat[t,i,"expect_wcatch"]>0)>0) MSE_dummy_data$HCR_mat[t,,"expect_wcatch"] <- HCR_mat[t,i,"expect_wcatch"]
@@ -886,17 +902,30 @@ future_vpa_R <- function(naa_mat,
         HCR_mat[t,i,"expect_wcatch"] <- mean(apply(res_tmp$wcaa[,t,],2,sum)) # determine ABC in year t here
         SR_MSE[t,i,"recruit"] <- mean(res_tmp$naa[1,t,])
         SR_MSE[t,i,"ssb"]     <- mean(res_tmp$SR_mat[t,,"ssb"])
+
+        if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+          MSE_dummy_data$HCR_mat[t,,"expect_revenue"] <- mean(apply(res_tmp$wcaa[,t,] * res_tmp$paa_mat[,t,],2,sum))
+        }
+
+
+
         # MSEでなく本来のFで漁獲していたらどうなっていたかの計算
         if(Pope==1){
-          SR_MSE[t,i,"real_true_catch"] <- sum(N_mat[,t,i]*(1-exp(-F_mat[,t,i]))*exp(-M_mat[,t,i]/2) * waa_catch_mat[,t,i])
+          wcatch_true <- N_mat[,t,i]*(1-exp(-F_mat[,t,i]))*exp(-M_mat[,t,i]/2) * waa_catch_mat[,t,i]
         }
         else{
-          SR_MSE[t,i,"real_true_catch"] <- sum(N_mat[,t,i]*(1-exp(-F_mat[,t,i]-M_mat[,t,i]))*F_mat[,t,i]/(F_mat[,t,i]+M_mat[,t,i]) * waa_catch_mat[,t,i])
+          wcatch_true <-  sum(N_mat[,t,i]*(1-exp(-F_mat[,t,i]-M_mat[,t,i]))*F_mat[,t,i]/(F_mat[,t,i]+M_mat[,t,i]) * waa_catch_mat[,t,i])
+        }
+
+        SR_MSE[t,i,"real_true_catch"] <- sum(wcatch_true)
+
+        if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+          SR_MSE[t,i,"real_true_rev"]<- sum( wcatch_true * paa_mat[,t,i])
         }
 
         MSE_seed <- MSE_seed+1
       }
-    }
+  }
 
     # TAC carry over setting
     if((sum(!is.na(HCR_mat[t,,"TAC_reserve_rate"]  ))>0) ||
@@ -1026,6 +1055,14 @@ future_vpa_R <- function(naa_mat,
         (F_pseudo_mat+M_mat) * waa_catch_mat
     }
     SR_MSE[,,"pseudo_true_catch"] <- apply(wcaa_tmp, c(2,3), sum)
+
+    if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+
+            revaa_mat_tmp <- wcaa_tmp * paa_mat
+
+      SR_MSE[t,i,"pseudo_true_rev"]<- apply(revaa_mat_tmp, c(2,3), sum)
+    }
+
   }
 
   if(objective<2){
