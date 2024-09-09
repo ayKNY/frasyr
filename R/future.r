@@ -195,7 +195,7 @@ make_future_data <- function(res_vpa,
                                       "blank5")))
 
   #HCR_mat <- array(0, dim=c(total_nyear, nsim, 7),
-  HCR_mat <- array(0, dim=c(total_nyear, nsim, 11),
+  HCR_mat <- array(0, dim=c(total_nyear, nsim, 12),
                    dimnames=list(year=allyear_name, nsim=1:nsim,
                                  par=c("beta","Blimit","Bban","year_lag", #1-4
                                        "expect_wcatch",# 5 漁獲量。ここにあらかじめ値を入れているとこの漁獲量どおりに漁獲する
@@ -205,7 +205,8 @@ make_future_data <- function(res_vpa,
                                        "TAC_reserve_amount", # 8 全漁獲可能量のうち何トンまで獲り残すか  #
                                        "TAC_carry_amount", # 9 何トンまで持ち越しを許容するか             #
                                        "TAC_upper_CV", # 10 漁獲量の変動の上側の上限
-                                       "TAC_lower_CV" # 11 漁獲量の変動の下側の下限
+                                       "TAC_lower_CV", # 11 漁獲量の変動の下側の下限,
+                                       "expect_revenue" # 12 総漁獲金額
                                        )))
   class(SR_mat)  <- "myarray"
   class(HCR_mat) <- "myarray"
@@ -311,6 +312,7 @@ make_future_data <- function(res_vpa,
   #    }
   #    HCR_mat[,,"wcatch"] <- apply(tmp,c(2,3),sum)
   HCR_mat[as.character(fix_wcatch$year), ,"expect_wcatch"] <- fix_wcatch$wcatch
+  HCR_mat[as.character(fix_wcatch$year), ,"expect_revenue"] <- NA
 
   waa_mat[is.na(waa_mat)] <- 0
   waa_catch_mat[is.na(waa_catch_mat)] <- 0
