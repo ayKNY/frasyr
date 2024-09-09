@@ -430,11 +430,11 @@ test_that("calculate_all_pm", {
   all_pm <- calculate_all_pm(res_future)
   expect_equal(is_tibble(all_pm),TRUE)
 
-  # 暫定テスト(1:10までの出力が一致するか）
+  # 暫定テスト(1:10までの出力が一致するか） => 出力範囲を過去にさかのぼって変えたため、参照範囲を修正
   c(`2017` = 710.22, `2018` = 447.9, `2019` = 470.5, `2020` = 1000, 
     `2021` = 2000, `2022` = 941.73, `2023` = 954.37, `2024` = 918.09, 
     `2025` = 897.95, `2026` = 895.95) %>%
-      expect_equal(round(all_pm$value[1:10],2))
+      expect_equal(round(all_pm$value[30:39],2))
 
   # 引数extra_periodの確認
   all_pm1 <- calculate_all_pm(res_future, period_extra=list(2:6, 0:4))
@@ -442,4 +442,5 @@ test_that("calculate_all_pm", {
 
   expect_equal(all_pm1, all_pm2)
   expect_equal(nrow(all_pm)<nrow(all_pm1), TRUE)
+  
 })

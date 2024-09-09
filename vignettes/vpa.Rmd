@@ -3,10 +3,9 @@ title: "VPA関数を使った資源量推定"
 author: "市野川桃子"
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    highlight: kate
-    toc: yes
-    toc_float: yes
+  pdf_document:
+    latex_engine: xelatex
+    
 vignette: >
   %\VignetteIndexEntry{1. Estimating abundances with VPA}
   %\VignetteEngine{knitr::rmarkdown}
@@ -38,7 +37,7 @@ plot(res_vpa$Fc.at.age,type="b",xlab="Age",ylab="F",ylim=c(0,max(res_vpa$Fc.at.a
 
 ## VPA結果を外部から読み込む場合
 
-- read.vpa関数を使って読み込めます
+- read.vpa数を使って読み込めます
 - out.vpa関数による出力と同じ書式になりますので、out.vpa関数でひな形ファイルを作成してから、エクセルでそれを編集し、read.vpa関数で読むと良いと思います
 
 ```{r}

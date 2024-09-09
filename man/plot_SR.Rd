@@ -19,13 +19,16 @@ plot_SR(
   CI = 0.9,
   shape_custom = c(21, 3),
   box.padding = 0,
-  add_graph = NULL
+  add_graph = NULL,
+  last_year_color = 0
 )
 }
 \arguments{
 \item{SR_result}{fit.SRの結果のオブジェクト}
 
 \item{refs}{管理基準値 (list(Blimit=0, Bmsy=10, Bban=0))}
+
+\item{last_year_color}{最終年何年かのプロットの色を「赤」に変更する。０だと変更しない、正の整数を与えるとその数分だけプロットの色が変わる}
 }
 \description{
 再生産関係をプロットする関数
