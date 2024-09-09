@@ -746,7 +746,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
       facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
-      xlim(xlim_year) +
+      #xlim(xlim_year) +
       ylab("log(Residual)") +
       theme_SH(base_size = 14)+
       geom_label(data = rho_data,
@@ -755,7 +755,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
 	  guides(x=guide_axis(minor.ticks = TRUE))+
-	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
+	  scale_x_continuous(limits=xlim_year,breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
     g1_sd <- ggplot(d_tidy) +
       geom_ribbon(aes(x = year, ymin = -qnorm(0.025), ymax = qnorm(0.025)), alpha=0.05)+
       geom_ribbon(aes(x = year, ymin = -qnorm(0.1), ymax = qnorm(0.1)), alpha=0.1)+
@@ -763,7 +763,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
       facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
-      xlim(xlim_year) +
+      #xlim(xlim_year) +
       ylab("log(Residual)") +
       theme_SH(base_size = 14)+
       geom_label(data = rho_data,
@@ -772,14 +772,14 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
 	  guides(x=guide_axis(minor.ticks = TRUE))+
-	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
+	  scale_x_continuous(limits=xlim_year, breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
   } else {
     g1 <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=resid, colour = Index_Label), size = 2) +
       facet_wrap(~Index_Label, scale = if(plot_scale) "free" else "fixed",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
-      xlim(xlim_year) +
+      #xlim(xlim_year) +
       ylab("log(Residual)") +
       theme_SH(base_size = 14)+
       geom_label(data = rho_data,
@@ -788,13 +788,13 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
 	  guides(x=guide_axis(minor.ticks = TRUE))+
-	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
+	  scale_x_continuous(limits=xlim_year, breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
     g1_sd <- ggplot(d_tidy) +
       geom_point(aes(x=year, y=sd.resid, colour = Index_Label), size = 2) +
       facet_wrap(~Index_Label, scale = if(plot_scale) "fixed" else "free",axes="all_x")+
       geom_hline(yintercept = 0, linewidth = 1)+
       xlab("Year") +
-      xlim(xlim_year) +
+      #xlim(xlim_year) +
       ylab("log(Residual)") +
       theme_SH(base_size = 14)+
       geom_label(data = rho_data,
@@ -803,7 +803,7 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
                                              ", rho=", round(ar1,2), signif)),
                  vjust="inward", hjust="inward")+
 	  guides(x=guide_axis(minor.ticks = TRUE))+
-	  scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
+	  scale_x_continuous(limits=xlim_year, breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
   }
   if(plot_smooth) g1 <- g1 + geom_smooth(aes(x=year, y=resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
   if(plot_smooth) g1_sd <- g1_sd + geom_smooth(aes(x=year, y=sd.resid, colour = Index_Label), lwd = 0.5, se=FALSE, lty=2)
@@ -812,12 +812,13 @@ plot_residual_vpa2 <- function(res, index_name = NULL, plot_smooth = FALSE, plot
     geom_point(aes(x=year, y=obs, colour = Index_Label), size = 2) +
     geom_line(aes(x=year, y=pred, colour = Index_Label), linewidth = 1) +
     facet_wrap(~Index_Label, scale="free") +
-    xlim(xlim_year) + ylim(0, NA) +
+    #xlim(xlim_year) + 
+	ylim(0, NA) +
     ylab("Abundance index") +
     xlab("Year") +
     theme_SH(base_size = 14)+
 	guides(x=guide_axis(minor.ticks = TRUE))+
-	scale_x_continuous(breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
+	scale_x_continuous(limits=xlim_year, breaks=scales::breaks_pretty(),minor_breaks=scales::breaks_width(1))
 
   # 資源量と指数の（非）線形性のプロット
   Lab_tmp <- unique(d_tidy$Index_Label)
@@ -1160,18 +1161,22 @@ plot_resboot_vpa <- function(res, B_ite = 1000, B_method = "p", ci_range = 0.95)
   if(ci_range >= 1) stop(paste0('"ci_range" must be less than 1'))
   res$input$plot <- FALSE
   res_boo <- boo.vpa(res, B = B_ite, method = B_method)
-
+  
   year <- res_boo[[1]]$index %>% colnames() %>% as.numeric()
   ssb_mat <- abund_mat <- biomass_mat <- matrix(NA, nrow = B_ite, ncol = length(year))
-  cor_mat <- NULL
+  cor_mat <-   NULL
+  n_error <- 0
+  
   for(i in 1:B_ite){
     tmp <- res_boo[[i]]
+	if(tmp[1]=="try-error"){n_error <- n_error + 1} else {n_error <- n_error } 
     if(tmp[1]=="try-error")next
     ssb_mat[i,] <- colSums(tmp$ssb, na.rm = TRUE)
     abund_mat[i,] <- as.numeric(tmp$naa[1,])
     biomass_mat[i,] <- colSums(tmp$baa, na.rm = TRUE)
     cor_num <- c(tmp$Fc.at.age, tmp$b, last(colSums(tmp$ssb)), last(as.numeric(tmp$naa[1,]))) %>%
       unlist() %>% as.numeric()
+	  
     if(res$input$last.catch.zero){
       cor_num <- c(tail(colSums(tmp$ssb),2)[1] %>% as.numeric(),
                    tail(tmp$naa[1,],2)[1] %>% as.numeric())
@@ -1179,7 +1184,9 @@ plot_resboot_vpa <- function(res, B_ite = 1000, B_method = "p", ci_range = 0.95)
     cor_mat <- rbind(cor_mat, cor_num)
   } # for(i)
   cor_mat <- as.data.frame(cor_mat)
-  rownames(cor_mat) <- str_c("ite",1:B_ite)
+  
+  rownames(cor_mat) <- str_c("ite",1:(B_ite-n_error))
+  
   colnames(cor_mat) <- c(str_c("term.F_age",1:length(tmp$Fc.at.age)-1),
                          str_c("b",1:length(tmp$b)),
                          "SSB_last", "Recruitment_last")
