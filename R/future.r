@@ -729,9 +729,13 @@ future_vpa_R <- function(naa_mat,
     # max_F_MSE <- max_F; max_exploitation_rate_MSE <- max_exploitation_rate
 
     #年齢別単価がインプットデータにある場合MSE上でも総漁獲金額を計算する
-    if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
+    if(!is.null(paa_mat) & objective >= 3 ){
       dimnames(SR_MSE)$par[14] <- "real_true_rev"
       dimnames(SR_MSE)$par[15] <- "pseudo_true_rev"
+
+    if(!any(names(MSE_input_data$data) == "paa_mat")){
+      MSE_input_data$data$paa_mat <- paa_mat
+    }
     }
   }
 
@@ -824,6 +828,11 @@ future_vpa_R <- function(naa_mat,
 #     MSE_input_data$input$max_F <- max_F_MSE
      #     MSE_input_data$input$max_exploitation_rate <- max_exploitation_rate_MSE
      MSE_dummy_data <- safe_call(make_future_data,MSE_input_data$input)$data
+
+     if(any(names(MSE_input_data$data) == "paa_mat")){
+       MSE_dummy_data <- add_paa_mat(safe_call(make_future_data,MSE_input_data$input),MSE_input_data$data$paa_mat[,1,1])$data
+     }
+
      MSE_dummy_data <- MSE_dummy_data %>%
         purrr::list_modify(future_initial_year   = t-2,
                            start_random_rec_year = t-1,
@@ -852,8 +861,8 @@ future_vpa_R <- function(naa_mat,
         MSE_dummy_data$HCR_mat[,,"TAC_lower_CV"] <- NA
 
         if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
-          MSE_dummy_data$paa_mat[ , , 1] <- MSE_input_data$data$paa_mat[ , , 1]
-        }
+          MSE_dummy_data$paa_mat[] <- MSE_input_data$data$paa_mat[ , , i]
+        } #in case
 
         # TACどおりに漁獲すると将来予測でも仮定して将来予測する!!
         if(MSE_catch_exact_TAC==TRUE) {
@@ -1062,7 +1071,7 @@ future_vpa_R <- function(naa_mat,
 
             revaa_mat_tmp <- wcaa_tmp * paa_mat
 
-      SR_MSE[t,i,"pseudo_true_rev"]<- apply(revaa_mat_tmp, c(2,3), sum)
+      SR_MSE[,,"pseudo_true_rev"]<- apply(revaa_mat_tmp, c(2,3), sum)
     }
 
   }
