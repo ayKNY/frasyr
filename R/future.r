@@ -314,7 +314,6 @@ make_future_data <- function(res_vpa,
   #    }
   #    HCR_mat[,,"wcatch"] <- apply(tmp,c(2,3),sum)
   HCR_mat[as.character(fix_wcatch$year), ,"expect_wcatch"] <- fix_wcatch$wcatch
-  HCR_mat[as.character(fix_wcatch$year), ,"expect_revenue"] <- NA
 
   waa_mat[is.na(waa_mat)] <- 0
   waa_catch_mat[is.na(waa_catch_mat)] <- 0
@@ -738,7 +737,7 @@ future_vpa_R <- function(naa_mat,
       dimnames(SR_MSE)$par[15] <- "pseudo_true_rev"
 
     if(!any(names(MSE_input_data$data) == "paa_mat")){
-      MSE_input_data$data$paa_mat <- paa_mat
+      MSE_input_data <- add_paa_fu_array(MSE_input_data, paa_mat[,1,1])
     }
     }
   }
@@ -871,10 +870,6 @@ future_vpa_R <- function(naa_mat,
         # TACどおりに漁獲すると将来予測でも仮定して将来予測する!!
         if(MSE_catch_exact_TAC==TRUE) {
           MSE_dummy_data$HCR_mat[t-1,,"expect_wcatch"] <- HCR_mat[t-1,i,"expect_wcatch"]
-
-          if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
-            MSE_dummy_data$HCR_mat[t-1,,"expect_revenue"] <- HCR_mat[t-1,i,"expect_revenue"]
-          }
           }
 
         # 漁獲量に上限設定があってそれが厳しい場合に上限を予測値から決定しないといけない
@@ -917,12 +912,6 @@ future_vpa_R <- function(naa_mat,
         HCR_mat[t,i,"expect_wcatch"] <- mean(apply(res_tmp$wcaa[,t,],2,sum)) # determine ABC in year t here
         SR_MSE[t,i,"recruit"] <- mean(res_tmp$naa[1,t,])
         SR_MSE[t,i,"ssb"]     <- mean(res_tmp$SR_mat[t,,"ssb"])
-
-        if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
-          MSE_dummy_data$HCR_mat[t,,"expect_revenue"] <- mean(apply(res_tmp$wcaa[,t,] * res_tmp$paa_mat[,t,],2,sum))
-        }
-
-
 
         # MSEでなく本来のFで漁獲していたらどうなっていたかの計算
         if(Pope==1){
