@@ -39,10 +39,12 @@ data_future_test <- make_future_data(res_vpa_org, # VPAの結果
                                      Pope=res_vpa_org$input$Pope
 )
 
+data_future_rev <- add_paa_mat(data_future = data_future_test,
+                                 paa = c(400, 1200, 1400, 1000))
+
 test_that("estimate multi to maximize the future revenue",{
 
-          data_future_rev <- add_paa_mat(data_future = data_future_test,
-                                         paa = c(400, 1200, 1400, 1000))
+
           #変動なしで計算
           data_future_rev$data$SR_mat[,,"deviance"] <- 0
 
@@ -66,15 +68,49 @@ test_that("estimate multi to maximize the future revenue",{
         }
                   )
 
-#デフォルトのMSY計算のシナリオに影響が出ないように設計する
 
-res_MSY_y <- est_MSYRP(data_future = data_future_rev, objective = "MSY")
+test_that("check MSE option under MSR scenario",
+          {
+            res_MSY_y <- est_MSYRP(data_future = data_future_rev, objective = "MSY")
 
-future_vpa(data_future_rev$data,
-           objective = "Revenue",
-           optim_method = "R",
-           obj_value = 3,
-           do_MSE = TRUE,
-           MSE_input_data = res_MSY_y$data_future_MSY$data,
-           MSE_sd = 0,
-           MSE_catch_exact_TAC = TRUE)
+            # expect_failure()
+
+            future_vpa(data_future_rev$data,
+                       objective = "Revenue",
+                       optim_method = "R",
+                       obj_value = 3,
+                       do_MSE = TRUE,
+                       MSE_input_data = res_MSY_y$data_future_MSY$data,
+                       MSE_sd = 0,
+                       MSE_catch_exact_TAC = TRUE)
+          })
+
+
+
+test_that("catch dependent price",
+          {
+
+            #平均値で調整する
+            data_future_rev_pfun <- data_future_rev
+            data_future_rev_pfun$data$paa_mat[,as.character(c(2018:2037)),] <-  data_future_rev$data$paa_mat[,as.character(c(2018:2037)),] / mean(c(400, 1200, 1400, 1000))
+
+            #密度依存で単価が変化することを想定して、単調減少の数式を仮定
+
+
+            # save(price_test_model, file = "price_test_model.rda")
+            data(price_test_model)
+
+            tmp_data <- list_assign(data_future_rev_pfun$data,
+                        min_price = 200,
+                        price_func = price_test_model  )
+
+              res_MSY_varev <-  future_vpa(tmp_data,
+                       objective = "Revenue",
+                       optim_method = "R",
+                       obj_value = 3)
+
+              }
+          )
+
+
+
