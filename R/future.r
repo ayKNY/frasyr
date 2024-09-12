@@ -675,10 +675,13 @@ future_vpa_R <- function(naa_mat,
                          waa_par_mat  = NULL, # option for waa_fun
                          waa_rand_mat = NULL,
                          waa_catch_par_mat  = NULL, # option for waa_catch_fun
-                         waa_catch_rand_mat = NULL,                         
+                         waa_catch_rand_mat = NULL,
                          maa_par_mat  = NULL, # option for maa_fun
                          maa_rand_mat = NULL,
-                         paa_mat = NULL){
+                         paa_mat = NULL,
+                         min_price = 500,
+                         price_func = NULL #glm model only
+                         ){
 
   options(deparse.max.lines=10)
 
@@ -696,7 +699,10 @@ future_vpa_R <- function(naa_mat,
   }
   if(is_waa_catch_fun && dimnames(waa_catch_par_mat)[[3]][1]=="waa_catch_fun_name"){
     update_waa_catch_mat <- get(waa_catch_par_mat[1,1,"waa_catch_fun_name"])
-  }    
+  }
+  if(!is.null(paa_mat) & !is.null(price_func)){
+    update_paa_mat <- paa_mat[ , , ] #mold
+  }
 
   HCR_function <- get(HCR_function_name)
   allyear_name <- as.numeric(dimnames(SR_mat)[[1]])
@@ -923,7 +929,24 @@ future_vpa_R <- function(naa_mat,
         SR_MSE[t,i,"real_true_catch"] <- sum(wcatch_true)
 
         if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
-          SR_MSE[t,i,"real_true_rev"]<- sum( wcatch_true * paa_mat[,t,i])
+          if(is.null(price_func)){
+
+          SR_MSE[t,i,"real_true_rev"] <- sum( wcatch_true * paa_mat[,t,i])
+
+        }else{
+          if(any(class(price_func) %in%  "glm")){
+            pred_df <- data.frame( "catch" = SR_MSE[t,i,"real_true_catch"]  )
+            #現段階では誤差を考慮していない
+            c_deps_p <- predict.glm(price_func, newdata = pred_df, type = "response")　%>% unname()
+            #価格がマイナスになる可能性があるので、最低価格を決めておく
+            if(min_price > c_deps_p){
+              c_deps_p <- min_price
+            }
+              update_paa_mat[ , t, i] <- c_deps_p * paa_mat[ , t, i]
+              SR_MSE[t,i,"real_true_rev"] <- sum( catch_true * update_paa_mat[,t,i])
+          }else{stop("this function class is not adopted")}
+
+        }
         }
 
         MSE_seed <- MSE_seed+1
@@ -1034,8 +1057,28 @@ future_vpa_R <- function(naa_mat,
       catch_temp <- catch_equation(N_mat[ , t, ],
                                    F_mat[ , t, ],
                                    waa_catch_mat[ , t, ],
-                                   M_mat[ , t,], Pope = Pope) * paa_mat[ , t, ]
-      HCR_realized[t, ,"revenue"] <- colSums(catch_temp)
+                                   M_mat[ , t,], Pope = Pope)
+
+      rev_tmp <-    catch_temp * paa_mat[ , t, ]
+
+      HCR_realized[t, ,"revenue"] <- colSums(rev_tmp)
+
+    if(!is.null(price_func)){
+      if(any(class(price_func) %in%  "glm")){
+
+            pred_df <- data.frame( "catch" = colSums(catch_temp)  )
+            c_deps_p <- predict.glm(price_func, newdata = pred_df, type = "response")　%>% unname()
+            #価格がマイナスになる可能性があるので、最低価格を決めておく
+
+             c_deps_p[min_price > c_deps_p] <- min_price
+
+              update_paa_mat[ , t, ] <- c_deps_p * paa_mat[ , t, ]
+
+               HCR_realized[t, ,"revenue"] <- colSums( catch_temp * update_paa_mat[ , t, ])
+
+          }else{stop("this function class is not adopted")}
+    }
+
           }
   }
 
@@ -1046,11 +1089,21 @@ future_vpa_R <- function(naa_mat,
     wcaa_mat <- N_mat*(1-exp(-F_mat-M_mat))*F_mat/(F_mat+M_mat) * waa_catch_mat
   }
   HCR_realized[,,"wcatch"] <- apply(wcaa_mat,c(2,3),sum)
-  
+
   if(!is.null(paa_mat)){
      revaa_mat <- wcaa_mat * paa_mat
      HCR_realized[,,"revenue"] <- apply(revaa_mat, c(2,3), sum) #総漁獲金額
-     }  
+
+     if(!is.null(price_func)){
+      if(any(class(price_func) %in%  "glm")){
+
+       revaa_mat <-  wcaa_mat * update_paa_mat
+      HCR_realized[,,"revenue"] <- apply(revaa_mat, c(2,3), sum)
+          }else{stop("this function class is not adopted")}
+    }
+
+
+     }
 
   if(isTRUE(do_MSE)){
     F_pseudo_mat <- MSE_input_data$data$faa
@@ -1073,6 +1126,24 @@ future_vpa_R <- function(naa_mat,
     if(!is.null(paa_mat) & any(names(MSE_input_data$data) %in% "paa_mat")){
 
             revaa_mat_tmp <- wcaa_tmp * paa_mat
+
+            if(!is.null(price_func)){
+
+              pseudo_c_deps_p <- purrr::imap_dfr( SR_MSE[,,"pseudo_true_catch"],  function(x,idx){
+                res <- predict.glm(pr_curve$GLM_res[[2]], newdata = x, type = "response")
+                if(res < min_price){res[res < min_price]  <- min_price}
+                names(res) <- idx
+                return(res)
+                } ) %>%   as.matrix( )
+
+                update_paa_mat_tmp <- update_paa_mat
+
+                for(sim in 1:ncol(pseudo_c_deps_p)){
+                  update_paa_mat_tmp[ , , sim] <- paa_mat[ , , sim] * pseudo_c_deps_p[ ,sim]
+                }
+
+              revaa_mat_tmp <- wcaa_tmp * update_paa_mat_tmp
+            }
 
       SR_MSE[,,"pseudo_true_rev"]<- apply(revaa_mat_tmp, c(2,3), sum)
     }
@@ -1119,14 +1190,15 @@ future_vpa_R <- function(naa_mat,
     tmb_data$SR_mat[,,"ssb"]  <- spawner_mat
     tmb_data$SR_mat[,,"recruit"]   <- N_mat[1,,]
     tmb_data$SR_mat[,,"biomass"]   <- apply(N_mat*waa_mat,c(2,3),sum)
-    tmb_data$SR_mat[,,"cbiomass"]  <- apply(N_mat*waa_catch_mat,c(2,3),sum)  
+    tmb_data$SR_mat[,,"cbiomass"]  <- apply(N_mat*waa_catch_mat,c(2,3),sum)
     res <- list(naa=N_mat, wcaa=wcaa_mat, faa=F_mat, SR_mat=tmb_data$SR_mat,maa=maa_mat,
                 HCR_mat=HCR_mat,HCR_realized=HCR_realized,multi=exp(x),waa=waa_mat, waa_catch_mat=waa_catch_mat)
     if(!is.null(paa_mat)){
       res$paa_mat <- paa_mat
+      if(!is.null(price_func)){res$update_paa_mat <- update_paa_mat}
       res$revaa_mat <- revaa_mat
       }
-    
+
     if(isTRUE(do_MSE)) res$SR_MSE <- SR_MSE
     return(res)
   }
